@@ -20,253 +20,264 @@ library(plotly)
 library(zoo)
 library(ggpubr)
 #Set working directory
-#setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) 
-condition <- "Tau441"
-setwd(paste("C:/Users/NITru/Downloads/CellSpecificData_ReExport/",condition,sep=""))
-
-create_empty_table <- function(num_rows, num_cols) {
-  frame <- data.frame(matrix(NA, nrow = num_rows, ncol = num_cols))
-  return(frame)
-}
-
-#for separate files
-#df <-  read_excel("Tau441_APP-GFP_0-01percentDMSO_cell07_czi_5e8aea3ee4065_hrm.xls", sheet = "Displacement Reference Frame", skip = 1)
-#df_ID_table <- read_excel("Tau441_APP-GFP_0-01percentDMSO_cell07_TibcoExport_Copy.xlsx", sheet = "Tabelle1")
-
-#for folders
-#make a vector with IDs for mobile, the table contains only trajectories longer than 10!
-full_ID_table <- read_excel("../mCherryTau441_Tau421_APP-eGFP_merged_table_TibcoSpotfireExport.xlsx", sheet = "Tabelle1")
-mobile_ID_table <- full_ID_table[ which(full_ID_table$Directionality!='Stationary'), ]
-mobile_ID_table$Original.ID <- as.factor(mobile_ID_table$`Original ID`)
-
-#renaming of rogue files
-old_filenames <- Sys.glob(file.path("*hrm*"))
-old_filenames
-for (i in old_filenames){  
-  better_name <- gsub("hrm_1","hrm",i)
-  better_name
-  file.rename(i, better_name)
-}
-
-#read in all files that can be opened
-filenames <- Sys.glob(file.path("*_hrm.xlsx"))
-filenames
-
-fractions_all_cells_datalist <- list()
-changes_all_cells_datalist <- list()
-
-for (x in filenames){  
-  print(x)
-  df <- read_excel(x, sheet = "Displacement Reference Frame", skip = 1)
-  df$TrackID <- as.factor(df$TrackID)
-  df_subset <- df[df$TrackID %in% mobile_ID_table$Original.ID,]
-  nlevels(df$TrackID)
-  
-  df_subset <- droplevels(df_subset)
-  nlevels(df_subset$TrackID)
-  
-  ggplot(df_subset, aes(x = `Displacement X Reference Frame`, y = `Displacement Y Reference Frame`)) + 
-    geom_path(aes(color = TrackID)) +
-    #theme_classic() +
-    ggtitle("Trajectories mobile fraction only") +
-    xlab("Displacement X Reference Frame") + 
-    ylab("Displacement Y Reference Frame") +
-    #geom_smooth(se=FALSE, linetype="dashed", size=0.1, aes(color = TrackID)) +
-    scale_x_continuous(breaks = seq(-5, 5, by = 0.5))
-    #scale_x_reverse() +
-  
-  #To avoid uninitialized column warning try:
-  df_subset$num <- NA
-  df_subset$smoothed_x_displacement <- NA
-  
-  df_subset$num <- ave(df_subset$`Displacement X Reference Frame`, df_subset$TrackID, FUN = seq_along)
-  df_subset$smoothed_x_displacement <- ave(df_subset$`Displacement X Reference Frame`, df_subset$TrackID, 
-      FUN= function(x) rollmean(x, k=10, na.pad=T) )
-  
-  df_subset <- na.omit(df_subset, cols="smoothed_x_displacement")
-  
-  ggplot(df_subset, aes(x = smoothed_x_displacement, y = Time)) + 
-    geom_path(aes(color = TrackID)) +
-    geom_path(aes(x = `Displacement X Reference Frame`, y = Time, color = TrackID), linetype = "dashed") +
-    #theme_classic() +
-    ggtitle("Trajectories, mobile fraction only, cut values out smoothing range") +
-    xlab("Displacement smoothed by window = 5") + 
-    ylab("Time") +
-    scale_y_reverse()  +
-    scale_x_continuous(breaks = seq(-5, 5, by = 0.5)) #+
-    #coord_flip()
-  
-  
-  #Kymograph analysis
-  df_subset <- df_subset[order(df_subset$TrackID),]
-  #To avoid uninitialized column warning try:
-  df_subset$delta_x <- NA
-  df_list <- list()
-  df_list <- split(df_subset, df_subset$TrackID)
-  for(i in 1:length(df_list)){
-    #print(df_list[[i]]$TrackID[1])
-    if (nrow(df_list[[i]]) > 1) {
-      for (j in 2:nrow(df_list[[i]])) {
-        df_list[[i]]$delta_x[[j]] <- df_list[[i]]$smoothed_x_displacement[[j]]-df_list[[i]]$smoothed_x_displacement[[j-1]]
-        #df_subset$angle[[i]] <- atan(1/(df_subset$smoothed_x_displacement[[i]]-df_subset$smoothed_x_displacement[[i-1]]))*180/pi #atan(1/(0.01))*180/pi #1/tan(89.5*pi/180)
-        #df_subset$velocity[[i]] <- sign(df_subset$smoothed_x_displacement[[i]]-df_subset$smoothed_x_displacement[[i-1]])*(df_subset$smoothed_x_displacement[[i]]-df_subset$smoothed_x_displacement[[i-1]])
-      }
-    }  
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) 
+#before #condition <- "Tau441"
+condition_folders <- Sys.glob(file.path("Tau*"))
+for (condition in condition_folders) {
+  print(condition)
+  setwd(paste("C:/Users/NITru/Downloads/CellSpecificData_ReExport/",condition,sep=""))
+  create_empty_table <- function(num_rows, num_cols) {
+    frame <- data.frame(matrix(NA, nrow = num_rows, ncol = num_cols))
+    return(frame)
   }
-  df_subset <- do.call(rbind, df_list)
   
-  df_subset$motion <- ifelse(df_subset$delta_x < -0.01, "retrograde", ifelse(df_subset$delta_x > 0.01, "anterograde", "stationary"))
+  #for separate files
+  #df <-  read_excel("Tau441_APP-GFP_0-01percentDMSO_cell07_czi_5e8aea3ee4065_hrm.xls", sheet = "Displacement Reference Frame", skip = 1)
+  #df_ID_table <- read_excel("Tau441_APP-GFP_0-01percentDMSO_cell07_TibcoExport_Copy.xlsx", sheet = "Tabelle1")
   
-  ggplot(na.omit(df_subset), aes(x = smoothed_x_displacement, y = Time)) + 
-    #geom_path() + #aes(color = TrackID)
-    geom_point(data = na.omit(df_subset), aes(color=motion), size=3) +
-    #theme_classic() +
-    ggtitle("Trajectories, mobile fraction only, wo filtering") +
-    xlab("Displacement smoothed by window = 5") + 
-    ylab("Time") +
-    scale_y_reverse() +
-    scale_x_continuous(breaks = seq(-5, 5, by = 0.5))
+  #for folders
+  #make a vector with IDs for mobile, the table contains only trajectories longer than 10!
+  full_ID_table <- read_excel("../mCherryTau441_Tau421_APP-eGFP_merged_table_TibcoSpotfireExport.xlsx", sheet = "Tabelle1")
+  mobile_ID_table <- full_ID_table[ which(full_ID_table$Directionality!='Stationary'), ]
+  mobile_ID_table$Original.ID <- as.factor(mobile_ID_table$`Original ID`)
   
-  df_subset_naomit <- na.omit(df_subset, cols="delta_x")
-  #Filtering: if previous and next are same, change the middle one for next
-  #make for TrackID
-  count=0
-  df_list_2 <- list()
-  df_list_2 <- split(df_subset_naomit, df_subset_naomit$TrackID)
-  for(i in 1:length(df_list_2)){
-    if (nrow(df_list_2[[i]])-1 > 1) {
-      for (j in 2:(nrow(df_list_2[[i]])-1)) {
-        state <- ifelse(df_list_2[[i]]$motion[[j]]==df_list_2[[i]]$motion[[j-1]],"same","different")
+  #renaming of rogue files
+  old_filenames <- Sys.glob(file.path("*hrm*"))
+  old_filenames
+  for (i in old_filenames){  
+    better_name <- gsub("hrm_1","hrm",i)
+    better_name
+    file.rename(i, better_name)
+  }
+  
+  #read in all files that can be opened
+  filenames <- Sys.glob(file.path("*_hrm.xlsx"))
+  filenames
+  
+  fractions_all_cells_datalist <- list()
+  changes_all_cells_datalist <- list()
+  
+  for (x in filenames){  
+    print(x)
+    df <- read_excel(x, sheet = "Displacement Reference Frame", skip = 1)
+    df$TrackID <- as.factor(df$TrackID)
+    df_subset <- df[df$TrackID %in% mobile_ID_table$Original.ID,]
+    nlevels(df$TrackID)
+    
+    df_subset <- droplevels(df_subset)
+    nlevels(df_subset$TrackID)
+    
+    ggplot(df_subset, aes(x = `Displacement X Reference Frame`, y = `Displacement Y Reference Frame`)) + 
+      geom_path(aes(color = TrackID)) +
+      #theme_classic() +
+      ggtitle("Trajectories mobile fraction only") +
+      xlab("Displacement X Reference Frame") + 
+      ylab("Displacement Y Reference Frame") +
+      #geom_smooth(se=FALSE, linetype="dashed", size=0.1, aes(color = TrackID)) +
+      scale_x_continuous(breaks = seq(-5, 5, by = 0.5))
+    #scale_x_reverse() +
+    
+    #To avoid uninitialized column warning try:
+    df_subset$num <- NA
+    df_subset$smoothed_x_displacement <- NA
+    
+    df_subset$num <- ave(df_subset$`Displacement X Reference Frame`, df_subset$TrackID, FUN = seq_along)
+    df_subset$smoothed_x_displacement <- ave(df_subset$`Displacement X Reference Frame`, df_subset$TrackID, 
+                                             FUN= function(x) rollmean(x, k=10, na.pad=T) )
+    
+    df_subset <- na.omit(df_subset, cols="smoothed_x_displacement")
+    
+    ggplot(df_subset, aes(x = smoothed_x_displacement, y = Time)) + 
+      geom_path(aes(color = TrackID)) +
+      geom_path(aes(x = `Displacement X Reference Frame`, y = Time, color = TrackID), linetype = "dashed") +
+      #theme_classic() +
+      ggtitle("Trajectories, mobile fraction only, cut values out smoothing range") +
+      xlab("Displacement smoothed by window = 5") + 
+      ylab("Time") +
+      scale_y_reverse()  +
+      scale_x_continuous(breaks = seq(-5, 5, by = 0.5)) #+
+    #coord_flip()
+    
+    
+    #Kymograph analysis
+    df_subset <- df_subset[order(df_subset$TrackID),]
+    #To avoid uninitialized column warning try:
+    df_subset$delta_x <- NA
+    df_list <- list()
+    df_list <- split(df_subset, df_subset$TrackID)
+    for(i in 1:length(df_list)){
+      #print(df_list[[i]]$TrackID[1])
+      if (nrow(df_list[[i]]) > 1) {
+        for (j in 2:nrow(df_list[[i]])) {
+          #IMPORTANT time is not always 1 apart, delta_x = delta_disp/delta_t
+          df_list[[i]]$delta_x[[j]] <- (df_list[[i]]$smoothed_x_displacement[[j]]-df_list[[i]]$smoothed_x_displacement[[j-1]])/(df_list[[i]]$Time[[j]]-df_list[[i]]$Time[[j-1]])
+          #df_subset$angle[[i]] <- atan(1/(df_subset$smoothed_x_displacement[[i]]-df_subset$smoothed_x_displacement[[i-1]]))*180/pi #atan(1/(0.01))*180/pi #1/tan(89.5*pi/180)
+          #df_subset$velocity[[i]] <- sign(df_subset$smoothed_x_displacement[[i]]-df_subset$smoothed_x_displacement[[i-1]])*(df_subset$smoothed_x_displacement[[i]]-df_subset$smoothed_x_displacement[[i-1]])
+        }
+      }  
+    }
+    df_subset <- do.call(rbind, df_list)
+    
+    df_subset$motion <- ifelse(df_subset$delta_x < -0.01, "retrograde", ifelse(df_subset$delta_x > 0.01, "anterograde", "stationary"))
+    
+    ggplot(na.omit(df_subset), aes(x = smoothed_x_displacement, y = Time)) + 
+      #geom_path() + #aes(color = TrackID)
+      geom_point(data = na.omit(df_subset), aes(color=motion), size=3) +
+      #theme_classic() +
+      ggtitle("Trajectories, mobile fraction only, wo filtering") +
+      xlab("Displacement smoothed by window = 5") + 
+      ylab("Time") +
+      scale_y_reverse() +
+      scale_x_continuous(breaks = seq(-5, 5, by = 0.5))
+    
+    df_subset_naomit <- na.omit(df_subset, cols="delta_x")
+    #Filtering: if previous and next are same, change the middle one for next
+    #make for TrackID
+    count=0
+    df_list_2 <- list()
+    df_list_2 <- split(df_subset_naomit, df_subset_naomit$TrackID)
+    for(i in 1:length(df_list_2)){
+      if (nrow(df_list_2[[i]])-1 > 1) {
+        for (j in 2:(nrow(df_list_2[[i]])-1)) {
+          state <- ifelse(df_list_2[[i]]$motion[[j]]==df_list_2[[i]]$motion[[j-1]],"same","different")
           if (state=="different" ) {
             state_next <- ifelse(df_list_2[[i]]$motion[[j+1]]==df_list_2[[i]]$motion[[j-1]],"next_same","next_different")
-          if (state_next=="next_same") {
-           df_list_2[[i]]$motion[[j]]=df_list_2[[i]]$motion[[j-1]]
-           count=count+1
+            if (state_next=="next_same") {
+              df_list_2[[i]]$motion[[j]]=df_list_2[[i]]$motion[[j-1]]
+              count=count+1
+            }
           }
         }
-      }
-    }  
-  }
-  df_subset_naomit <- do.call(rbind, df_list_2)
-  print(paste("Reset state", count, "times"))
-  
-  df_subset_naomit$motion <- as.factor(df_subset_naomit$motion)
-  summary(df_subset_naomit$motion)[1]
-  
-  ggplot(df_subset_naomit, aes(x = smoothed_x_displacement, y = Time)) + 
-    #geom_path(data = df_subset_naomit, aes(x = smoothed_x_displacement, y = Time)) +
-    #geom_path(data = df_subset, aes(x = `Displacement X Reference Frame`, y = Time, color = TrackID), linetype = "dashed") + #has to have color = TrackID to be shown as separate
-    geom_point(aes(color=motion), size=3) +
-    #theme_classic() +
-    ggtitle("Trajectories, mobile fraction only, filtered") +
-    xlab("Displacement smoothed by window = 5") + 
-    ylab("Time") +
-    scale_y_reverse() +
-    scale_x_continuous(breaks = seq(-5, 5, by = 0.5))
-  
-  #count state fractions
-  df_list_3 <- list()
-  df_list_3 <- split(df_subset_naomit, df_subset_naomit$TrackID)
-  
-  fractions_datalist <- list()
-  fractions_df <- create_empty_table(3,1)
-  changes_datalist <- list()
-  state_changes_df <- create_empty_table(6,1)
-  #for each trajectory creates data lists for further assembley into tables
-  for(i in 1:length(df_list_3)){
-    #set row names later as trajectory IDs
-    name <- df_list_3[[i]]$TrackID[1]
-    #state percentage for each trajectory - IS IT REASONNABLE? then further on they will be taken as mean for each cell
-    fractions_df[1,] <- 100*summary(df_list_3[[i]]$motion)[1]/sum(summary(df_list_3[[i]]$motion))
-    fractions_df[2,] <- 100*summary(df_list_3[[i]]$motion)[2]/sum(summary(df_list_3[[i]]$motion))
-    fractions_df[3,] <- 100*summary(df_list_3[[i]]$motion)[3]/sum(summary(df_list_3[[i]]$motion))
-    fractions_datalist[name] <-  as.list(fractions_df)
-    #state changes for each trajectory
-    retr_stat=0
-    ant_stat=0
-    retr_ant=0
-    ant_retr=0
-    stat_retr=0
-    stat_ant=0
-    if (nrow(df_list_3[[i]])-1 > 1) {
-      for (j in 2:(nrow(df_list_3[[i]])-1)) {
-        state_change <- ifelse(df_list_3[[i]]$motion[[j]]==df_list_3[[i]]$motion[[j-1]],"same","different")
-        if (state_change=="different") {
-          if (df_list_3[[i]]$motion[[j]]=="stationary" & df_list_3[[i]]$motion[[j-1]]=="retrograde") {
-            retr_stat=retr_stat+1
-          }
-          if (df_list_3[[i]]$motion[[j]]=="stationary" & df_list_3[[i]]$motion[[j-1]]=="anterograde") {
-            ant_stat=ant_stat+1
-          }
-          if (df_list_3[[i]]$motion[[j]]=="anterograde" & df_list_3[[i]]$motion[[j-1]]=="retrograde") {
-            retr_ant=retr_ant+1
-          }
-          if (df_list_3[[i]]$motion[[j]]=="retrograde" & df_list_3[[i]]$motion[[j-1]]=="anterograde") {
-            ant_retr=ant_retr+1
-          }
-          if (df_list_3[[i]]$motion[[j]]=="retrograde" & df_list_3[[i]]$motion[[j-1]]=="stationary") {
-            stat_retr=stat_retr+1
-          }
-          if (df_list_3[[i]]$motion[[j]]=="anterograde" & df_list_3[[i]]$motion[[j-1]]=="stationary") {
-            stat_ant=stat_ant+1
-          }
-        }  
+      }  
+    }
+    df_subset_naomit <- do.call(rbind, df_list_2)
+    print(paste("Reset state", count, "times"))
+    
+    df_subset_naomit$motion <- as.factor(df_subset_naomit$motion)
+    summary(df_subset_naomit$motion)[1]
+    
+    ggplot(df_subset_naomit, aes(x = smoothed_x_displacement, y = Time)) + 
+      #geom_path(data = df_subset_naomit, aes(x = smoothed_x_displacement, y = Time)) +
+      #geom_path(data = df_subset, aes(x = `Displacement X Reference Frame`, y = Time, color = TrackID), linetype = "dashed") + #has to have color = TrackID to be shown as separate
+      geom_point(aes(color=motion), size=3) +
+      #theme_classic() +
+      ggtitle("Trajectories, mobile fraction only, filtered") +
+      xlab("Displacement smoothed by window = 5") + 
+      ylab("Time") +
+      scale_y_reverse() +
+      scale_x_continuous(breaks = seq(-5, 5, by = 0.5))
+    
+    #count state fractions
+    df_list_3 <- list()
+    df_list_3 <- split(df_subset_naomit, df_subset_naomit$TrackID)
+    
+    fractions_datalist <- list()
+    fractions_df <- create_empty_table(3,1)
+    changes_datalist <- list()
+    state_changes_df <- create_empty_table(6,1)
+    #for each trajectory creates data lists for further assembley into tables
+    for(i in 1:length(df_list_3)){
+      #set row names later as trajectory IDs
+      name <- df_list_3[[i]]$TrackID[1]
+      #state percentage for each trajectory - IS IT REASONABLE? then further on they will be taken as mean for each cell
+      fractions_df[1,] <- 100*summary(df_list_3[[i]]$motion)[1]/sum(summary(df_list_3[[i]]$motion))
+      fractions_df[2,] <- 100*summary(df_list_3[[i]]$motion)[2]/sum(summary(df_list_3[[i]]$motion))
+      fractions_df[3,] <- 100*summary(df_list_3[[i]]$motion)[3]/sum(summary(df_list_3[[i]]$motion))
+      fractions_datalist[name] <-  as.list(fractions_df)
+      #state changes for each trajectory
+      retr_stat=0
+      ant_stat=0
+      retr_ant=0
+      ant_retr=0
+      stat_retr=0
+      stat_ant=0
+      if (nrow(df_list_3[[i]])-1 > 1) {
+        for (j in 2:(nrow(df_list_3[[i]])-1)) {
+          state_change <- ifelse(df_list_3[[i]]$motion[[j]]==df_list_3[[i]]$motion[[j-1]],"same","different")
+          if (state_change=="different") {
+            if (df_list_3[[i]]$motion[[j]]=="stationary" & df_list_3[[i]]$motion[[j-1]]=="retrograde") {
+              retr_stat=retr_stat+1
+            }
+            if (df_list_3[[i]]$motion[[j]]=="stationary" & df_list_3[[i]]$motion[[j-1]]=="anterograde") {
+              ant_stat=ant_stat+1
+            }
+            if (df_list_3[[i]]$motion[[j]]=="anterograde" & df_list_3[[i]]$motion[[j-1]]=="retrograde") {
+              retr_ant=retr_ant+1
+            }
+            if (df_list_3[[i]]$motion[[j]]=="retrograde" & df_list_3[[i]]$motion[[j-1]]=="anterograde") {
+              ant_retr=ant_retr+1
+            }
+            if (df_list_3[[i]]$motion[[j]]=="retrograde" & df_list_3[[i]]$motion[[j-1]]=="stationary") {
+              stat_retr=stat_retr+1
+            }
+            if (df_list_3[[i]]$motion[[j]]=="anterograde" & df_list_3[[i]]$motion[[j-1]]=="stationary") {
+              stat_ant=stat_ant+1
+            }
+          }  
+        }
+        #relative to trajectory length, before was not divided, beware of the gaps time!=tracked_spots*0.2, can be higher, better take from Tibco table
+        n <- (nrow(df_list_3[[i]]))
+        track_duration <- (df_list_3[[i]]$Time[[n]]-df_list_3[[i]]$Time[[1]]+10)*0.2
+        state_changes_df[1,] <- retr_stat/track_duration
+        state_changes_df[2,] <- ant_stat/track_duration
+        state_changes_df[3,] <- retr_ant/track_duration
+        state_changes_df[4,] <- ant_retr/track_duration
+        state_changes_df[5,] <- stat_retr/track_duration
+        state_changes_df[6,] <- stat_ant/track_duration
+        changes_datalist[name] <-  as.list(state_changes_df)
       }
     }
-    state_changes_df[1,] <- retr_stat
-    state_changes_df[2,] <- ant_stat
-    state_changes_df[3,] <- retr_ant
-    state_changes_df[4,] <- ant_retr
-    state_changes_df[5,] <- stat_retr
-    state_changes_df[6,] <- stat_ant
-    changes_datalist[name] <-  as.list(state_changes_df)
+    
+    assembled_state_fractions <- as.data.frame(do.call(rbind, fractions_datalist))
+    assembled_state_fractions <- setNames(assembled_state_fractions,c("Anterograde","Retrograde","Stationary"))
+    #barplot(t(assembled_state_fractions), legend = colnames(assembled_state_fractions))
+    assembled_state_fractions_out <- assembled_state_fractions
+    assembled_state_fractions_out$condition <- condition
+    write.table(assembled_state_fractions_out, paste(x, "_assembled_state_fractions.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
+    
+    assembled_state_changes <- as.data.frame(do.call(rbind, changes_datalist))
+    assembled_state_changes <- setNames(assembled_state_changes,c("RS","AS","RA","AR","SR","SA"))
+    #barplot(t(assembled_state_changes), legend = colnames(assembled_state_changes))
+    assembled_state_changes_out <- assembled_state_changes
+    assembled_state_changes_out$condition <- condition
+    write.table(assembled_state_changes_out, paste(x, "_assembled_state_changes.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
+    
+    #CHECK for multiple files in folder
+    as.data.frame(colMeans(assembled_state_fractions))
+    
+    fractions_all_cells_datalist[x] <- as.data.frame(colMeans(assembled_state_fractions))
+    changes_all_cells_datalist[x] <- as.data.frame(colMeans(assembled_state_changes))
+    
+    ggplot(df_subset_naomit, aes(x = delta_x)) + 
+      geom_density(aes(fill = motion), alpha = 0.4) +
+      #geom_histogram(aes(fill = motion), alpha = 0.4,bins=500)+
+      #theme_classic() +
+      ggtitle("Trajectories, mobile fraction only") +
+      xlab("Delta_x") + 
+      ylab("Density") 
+    
+    # Basic density plot with mean line and marginal rug
+    ggdensity(df_subset_naomit, x = "delta_x", 
+              fill = "motion", color = "motion",
+              add = "mean", rug = TRUE)
   }
-
-  assembled_state_fractions <- as.data.frame(do.call(rbind, fractions_datalist))
-  assembled_state_fractions <- setNames(assembled_state_fractions,c("Anterograde","Retrograde","Stationary"))
-  #barplot(t(assembled_state_fractions), legend = colnames(assembled_state_fractions))
-  write.table(assembled_state_fractions, paste(x, "_assembled_state_fractions.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
   
-  assembled_state_changes <- as.data.frame(do.call(rbind, changes_datalist))
-  assembled_state_changes <- setNames(assembled_state_changes,c("RS","AS","RA","AR","SR","SA"))
-  #barplot(t(assembled_state_changes), legend = colnames(assembled_state_changes))
-  write.table(assembled_state_changes, paste(x, "_assembled_state_changes.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
+  assembled_state_fractions_all_cells <- as.data.frame(do.call(rbind, fractions_all_cells_datalist))
+  assembled_state_fractions_all_cells <- setNames(assembled_state_fractions_all_cells,c("Anterograde","Retrograde","Stationary"))
+  assembled_state_fractions_all_cells$condition <- condition
+  png(paste(condition, "_fractions_final.png", sep=""), width = 1000, height = 600) 
+  barplot(t(assembled_state_fractions_all_cells), legend = colnames(assembled_state_fractions_all_cells),las=2)
+  dev.off()
+  write.table(assembled_state_fractions_all_cells, paste(condition, "_fractions_final.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
   
-  #CHECK for multiple files in folder
-  as.data.frame(colMeans(assembled_state_fractions))
-  
-  fractions_all_cells_datalist[x] <- as.data.frame(colMeans(assembled_state_fractions))
-  changes_all_cells_datalist[x] <- as.data.frame(colMeans(assembled_state_changes))
-
-  ggplot(df_subset_naomit, aes(x = delta_x)) + 
-    geom_density(aes(fill = motion), alpha = 0.4) +
-    #geom_histogram(aes(fill = motion), alpha = 0.4,bins=500)+
-    #theme_classic() +
-    ggtitle("Trajectories, mobile fraction only") +
-    xlab("Delta_x") + 
-    ylab("Density") 
-  
-  # Basic density plot with mean line and marginal rug
-  ggdensity(df_subset_naomit, x = "delta_x", 
-            fill = "motion", color = "motion",
-            add = "mean", rug = TRUE)
+  assembled_state_changes_all_cells <- as.data.frame(do.call(rbind, changes_all_cells_datalist))
+  assembled_state_changes_all_cells <- setNames(assembled_state_changes_all_cells,c("RS","AS","RA","AR","SR","SA"))
+  assembled_state_changes_all_cells$condition <- condition
+  png(paste(condition, "_changes_final.png", sep=""), width = 1000, height = 600) 
+  barplot(t(assembled_state_changes_all_cells), legend = colnames(assembled_state_changes_all_cells),las=2)
+  dev.off()
+  write.table(assembled_state_changes_all_cells, paste(condition, "_changes_final.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
 }
-
-assembled_state_fractions_all_cells <- as.data.frame(do.call(rbind, fractions_all_cells_datalist))
-assembled_state_fractions_all_cells <- setNames(assembled_state_fractions_all_cells,c("Anterograde","Retrograde","Stationary"))
-assembled_state_fractions_all_cells$condition <- condition
-png(paste(condition, "_fractions_final.png", sep=""), width = 1000, height = 600) 
-barplot(t(assembled_state_fractions_all_cells), legend = colnames(assembled_state_fractions_all_cells),las=2)
-dev.off()
-write.table(assembled_state_fractions_all_cells, paste(condition, "_fractions_final.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
-
-assembled_state_changes_all_cells <- as.data.frame(do.call(rbind, changes_all_cells_datalist))
-assembled_state_changes_all_cells <- setNames(assembled_state_changes_all_cells,c("RS","AS","RA","AR","SR","SA"))
-assembled_state_changes_all_cells$condition <- condition
-png(paste(condition, "_changes_final.png", sep=""), width = 1000, height = 600) 
-barplot(t(assembled_state_changes_all_cells), legend = colnames(assembled_state_changes_all_cells),las=2)
-dev.off()
-write.table(assembled_state_changes_all_cells, paste(condition, "_changes_final.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
 
 
 #to save the last plot as plotly object
