@@ -8,6 +8,11 @@
 #open the file and save it again or use linux subsystem to automatically write them into new files to be able to open them
 #unoconv -f xlsx *.xls
 #for dir in *; do [ -d "$dir" ] && unoconv -f xlsx "$dir"/*.xls; done
+
+#v3
+#nrow(df_list[[i]])-1 > 24/49/99/149 instead of 1 - check again the lengths!! Should it be 10 less i.e. 14,39...? 
+#check that the lists to write out are empty (if there are no long trajectories for the cell) if (n != 0)  and if(length(changes_datalist) != 0) 
+#added
 ###############################################
 #Libraries
 library(readxl)
@@ -179,11 +184,7 @@ for (condition in condition_folders) {
     for(i in 1:length(df_list_3)){
       #set row names later as trajectory IDs
       name <- df_list_3[[i]]$TrackID[1]
-      #state percentage for each trajectory - IS IT REASONABLE? then further on they will be taken as mean for each cell
-      fractions_df[1,] <- 100*summary(df_list_3[[i]]$motion)[1]/sum(summary(df_list_3[[i]]$motion))
-      fractions_df[2,] <- 100*summary(df_list_3[[i]]$motion)[2]/sum(summary(df_list_3[[i]]$motion))
-      fractions_df[3,] <- 100*summary(df_list_3[[i]]$motion)[3]/sum(summary(df_list_3[[i]]$motion))
-      fractions_datalist[name] <-  as.list(fractions_df)
+
       #state changes for each trajectory
       retr_stat=0
       ant_stat=0
@@ -192,6 +193,11 @@ for (condition in condition_folders) {
       stat_retr=0
       stat_ant=0
       if (nrow(df_list_3[[i]])-1 > 1) {
+        #state percentage for each trajectory - IS IT REASONABLE? then further on they will be taken as mean for each cell
+        fractions_df[1,] <- 100*summary(df_list_3[[i]]$motion)[1]/sum(summary(df_list_3[[i]]$motion))
+        fractions_df[2,] <- 100*summary(df_list_3[[i]]$motion)[2]/sum(summary(df_list_3[[i]]$motion))
+        fractions_df[3,] <- 100*summary(df_list_3[[i]]$motion)[3]/sum(summary(df_list_3[[i]]$motion))
+        fractions_datalist[name] <-  as.list(fractions_df)
         for (j in 2:(nrow(df_list_3[[i]])-1)) {
           state_change <- ifelse(df_list_3[[i]]$motion[[j]]==df_list_3[[i]]$motion[[j-1]],"same","different")
           if (state_change=="different") {
@@ -217,30 +223,36 @@ for (condition in condition_folders) {
         }
         #relative to trajectory length, before was not divided, beware of the gaps time!=tracked_spots*0.2, can be higher, better take from Tibco table
         n <- (nrow(df_list_3[[i]]))
-        track_duration <- (df_list_3[[i]]$Time[[n]]-df_list_3[[i]]$Time[[1]]+10)*0.2
-        state_changes_df[1,] <- retr_stat/track_duration
-        state_changes_df[2,] <- ant_stat/track_duration
-        state_changes_df[3,] <- retr_ant/track_duration
-        state_changes_df[4,] <- ant_retr/track_duration
-        state_changes_df[5,] <- stat_retr/track_duration
-        state_changes_df[6,] <- stat_ant/track_duration
-        changes_datalist[name] <-  as.list(state_changes_df)
+        if (n != 0) {
+          track_duration <- (df_list_3[[i]]$Time[[n]]-df_list_3[[i]]$Time[[1]]+10)*0.2
+          state_changes_df[1,] <- retr_stat/track_duration
+          state_changes_df[2,] <- ant_stat/track_duration
+          state_changes_df[3,] <- retr_ant/track_duration
+          state_changes_df[4,] <- ant_retr/track_duration
+          state_changes_df[5,] <- stat_retr/track_duration
+          state_changes_df[6,] <- stat_ant/track_duration
+          changes_datalist[name] <-  as.list(state_changes_df)
+        }
       }
     }
     
+    if(length(fractions_datalist) != 0) {
     assembled_state_fractions <- as.data.frame(do.call(rbind, fractions_datalist))
     assembled_state_fractions <- setNames(assembled_state_fractions,c("Anterograde","Retrograde","Stationary"))
     #barplot(t(assembled_state_fractions), legend = colnames(assembled_state_fractions))
     assembled_state_fractions_out <- assembled_state_fractions
     assembled_state_fractions_out$condition <- condition
     write.table(assembled_state_fractions_out, paste(x, "_assembled_state_fractions.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
+    }
     
-    assembled_state_changes <- as.data.frame(do.call(rbind, changes_datalist))
-    assembled_state_changes <- setNames(assembled_state_changes,c("RS","AS","RA","AR","SR","SA"))
-    #barplot(t(assembled_state_changes), legend = colnames(assembled_state_changes))
-    assembled_state_changes_out <- assembled_state_changes
-    assembled_state_changes_out$condition <- condition
-    write.table(assembled_state_changes_out, paste(x, "_assembled_state_changes.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
+    if(length(changes_datalist) != 0) {
+      assembled_state_changes <- as.data.frame(do.call(rbind, changes_datalist))
+      assembled_state_changes <- setNames(assembled_state_changes,c("RS","AS","RA","AR","SR","SA"))
+      #barplot(t(assembled_state_changes), legend = colnames(assembled_state_changes))
+      assembled_state_changes_out <- assembled_state_changes
+      assembled_state_changes_out$condition <- condition
+      write.table(assembled_state_changes_out, paste(x, "_assembled_state_changes.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
+    }
     
     #CHECK for multiple files in folder
     as.data.frame(colMeans(assembled_state_fractions))
@@ -261,7 +273,6 @@ for (condition in condition_folders) {
               fill = "motion", color = "motion",
               add = "mean", rug = TRUE)
   }
-  
   assembled_state_fractions_all_cells <- as.data.frame(do.call(rbind, fractions_all_cells_datalist))
   assembled_state_fractions_all_cells <- setNames(assembled_state_fractions_all_cells,c("Anterograde","Retrograde","Stationary"))
   assembled_state_fractions_all_cells$condition <- condition
