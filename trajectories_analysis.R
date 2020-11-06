@@ -24,10 +24,11 @@ library(stringr)
 library(plotly)
 library(zoo)
 library(ggpubr)
+library(rlist)
 #Set working directory
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) 
 #test with 
-#condition <- "Tau441"
+#condition <- "Tau441_001percentDMSO"
 condition_folders <- Sys.glob(file.path("Tau*"))
 for (condition in condition_folders) {
   #print(condition)
@@ -308,6 +309,10 @@ for (condition in condition_folders) {
     
     #for each trajectory creates data lists for further assembly into tables
     for(i in 1:length(df_list_4)){
+      #for checking
+      #i=1
+      #View(df_list_4[[i]])
+      
       #set row names later as trajectory IDs
       name <- df_list_4[[i]]$TrackID[1]
       
@@ -316,52 +321,98 @@ for (condition in condition_folders) {
       ant_vel=0
       retr_vel_list <- list()
       ant_vel_list <- list()
-      library(rlist)
-      first=1
+      
       if (nrow(df_list_4[[i]])-1 > 1) { #24...
-        for (j in 2:(nrow(df_list_4[[i]])-1)) {
+        for (j in 2:(nrow(df_list_4[[i]]))) {
+          first=j-1
           state_change <- ifelse(df_list_4[[i]]$motion[[j]]==df_list_4[[i]]$motion[[j-1]],"same","different")
-          traj_end <- ifelse(j+1==nrow(df_list_4[[i]]),"end","middle")
-          #print(traj_end)
-          #print(paste("First",df_list_4[[i]]$motion[[first]],"Now",df_list_4[[i]]$motion[[j]],sep=" "))
-          if (state_change=="different" & traj_end=="middle") {
-            if (df_list_4[[i]]$motion[[first]]=="retrograde" ) {
-              retr_vel = (df_list_4[[i]]$smoothed_x_displacement[[j]] - df_list_4[[i]]$smoothed_x_displacement[[first]])/(df_list_4[[i]]$Time[[j]] - df_list_4[[i]]$Time[[first]])
-              retr_vel_list <- list.append(retr_vel_list,retr_vel)
-              #print(paste("retr",retr_vel,sep=" "))
-              first=j
+          traj_end <- ifelse(j==nrow(df_list_4[[i]]),"end","middle")
+          #print(state_change)
+          if (first==1){
+            if (state_change=="different" && traj_end=="middle") {
+              #print(df_list_4[[i]]$motion[[first]])
+              if (df_list_4[[i]]$motion[[first]]=="retrograde" ) {
+                retr_vel = (df_list_4[[i]]$smoothed_x_displacement[[j-1]] - 0)/(df_list_4[[i]]$Time[[j-1]] - df_list_4[[i]]$Time[[first]] + 1)
+                retr_vel_list <- list.append(retr_vel_list,retr_vel)
+                #print(paste("retr",retr_vel,sep=" "))
+                first=j
+                next #is needed to avoid going from e.g. "SRAS" changes mistakes 
+              }
+              if (df_list_4[[i]]$motion[[first]]=="anterograde") {
+                ant_vel = (df_list_4[[i]]$smoothed_x_displacement[[j-1]] - 0)/(df_list_4[[i]]$Time[[j-1]] - df_list_4[[i]]$Time[[first]] + 1)
+                ant_vel_list <- list.append(ant_vel_list,ant_vel)
+                #print(paste("ant",ant_vel,sep=" "))
+                first=j
+                next
+              } 
+              if (df_list_4[[i]]$motion[[first]]=="stationary") {
+                first=j
+                next
+              }
             }
-            if (df_list_4[[i]]$motion[[first]]=="anterograde") {
-              ant_vel = (df_list_4[[i]]$smoothed_x_displacement[[j]] - df_list_4[[i]]$smoothed_x_displacement[[first]])/(df_list_4[[i]]$Time[[j]] - df_list_4[[i]]$Time[[first]])
-              ant_vel_list <- list.append(ant_vel_list,ant_vel)
-              #print(paste("ant",ant_vel,sep=" "))
-              first=j
-            } else {
-              first=j
+            if (traj_end=="end") {
+              if (df_list_4[[i]]$motion[[j]]=="retrograde") {
+                retr_vel = (df_list_4[[i]]$smoothed_x_displacement[[j]] - 0)/(df_list_4[[i]]$Time[[j]] - df_list_4[[i]]$Time[[first]] + 1)
+                retr_vel_list <- list.append(retr_vel_list,retr_vel)
+                #print(paste("retr",retr_vel,sep=" "))
+                break
+              }
+              if (df_list_4[[i]]$motion[[j]]=="anterograde") {
+                ant_vel = (df_list_4[[i]]$smoothed_x_displacement[[j]] - 0)/(df_list_4[[i]]$Time[[j]] - df_list_4[[i]]$Time[[first]] + 1)
+                ant_vel_list <- list.append(ant_vel_list,ant_vel)
+                #print(paste("ant",ant_vel,sep=" "))
+                break
+              }
             }
+            next
           }
-          if (traj_end=="end") {
-            if (df_list_4[[i]]$motion[[j]]=="retrograde") {
-              retr_vel = (df_list_4[[i]]$smoothed_x_displacement[[j]] - df_list_4[[i]]$smoothed_x_displacement[[first]])/(df_list_4[[i]]$Time[[j]] - df_list_4[[i]]$Time[[first]])
-              retr_vel_list <- list.append(retr_vel_list,retr_vel)
-              #print(paste("retr",retr_vel,sep=" "))
-              break
+          if (first!=1){
+            if (state_change=="different" && traj_end=="middle") {
+              #print(df_list_4[[i]]$motion[[first]])
+              if (df_list_4[[i]]$motion[[first]]=="retrograde" ) {
+                retr_vel = (df_list_4[[i]]$smoothed_x_displacement[[j-1]] - df_list_4[[i]]$smoothed_x_displacement[[first-1]])/(df_list_4[[i]]$Time[[j-1]] - df_list_4[[i]]$Time[[first-1]])
+                retr_vel_list <- list.append(retr_vel_list,retr_vel)
+                #print(paste("retr",retr_vel,sep=" "))
+                first=j
+                next #is needed to avoid going from e.g. "SRAS" changes mistakes 
+              }
+              if (df_list_4[[i]]$motion[[first]]=="anterograde") {
+                ant_vel = (df_list_4[[i]]$smoothed_x_displacement[[j-1]] - df_list_4[[i]]$smoothed_x_displacement[[first-1]])/(df_list_4[[i]]$Time[[j-1]] - df_list_4[[i]]$Time[[first-1]])
+                ant_vel_list <- list.append(ant_vel_list,ant_vel)
+                #print(paste("ant",ant_vel,sep=" "))
+                first=j
+                next
+              } 
+              if (df_list_4[[i]]$motion[[first]]=="stationary") {
+                first=j
+                next
+              }
             }
-            if (df_list_4[[i]]$motion[[j]]=="anterograde") {
-              ant_vel = (df_list_4[[i]]$smoothed_x_displacement[[j]] - df_list_4[[i]]$smoothed_x_displacement[[first]])/(df_list_4[[i]]$Time[[j]] - df_list_4[[i]]$Time[[first]])
-              ant_vel_list <- list.append(ant_vel_list,ant_vel)
-              #print(paste("ant",ant_vel,sep=" "))
-              break
-            } else {
-              break
+            if (traj_end=="end") {
+              if (df_list_4[[i]]$motion[[j]]=="retrograde") {
+                retr_vel = (df_list_4[[i]]$smoothed_x_displacement[[j]] - df_list_4[[i]]$smoothed_x_displacement[[first-1]])/(df_list_4[[i]]$Time[[j]] - df_list_4[[i]]$Time[[first-1]])
+                retr_vel_list <- list.append(retr_vel_list,retr_vel)
+                #print(paste("retr",retr_vel,sep=" "))
+                break
+              }
+              if (df_list_4[[i]]$motion[[j]]=="anterograde") {
+                ant_vel = (df_list_4[[i]]$smoothed_x_displacement[[j]] - df_list_4[[i]]$smoothed_x_displacement[[first-1]])/(df_list_4[[i]]$Time[[j]] - df_list_4[[i]]$Time[[first-1]])
+                ant_vel_list <- list.append(ant_vel_list,ant_vel)
+                #print(paste("ant",ant_vel,sep=" "))
+                break
+              }
             }
           }
         } 
       } 
       if(length(retr_vel_list) != 0) {
+        #print(unlist(retr_vel_list))
+        mean(unlist(retr_vel_list))
         velocity_df[1,] <- mean(unlist(retr_vel_list))
       }
       if(length(ant_vel_list) != 0) {
+        #print(unlist(ant_vel_list))
+        mean(unlist(ant_vel_list))
         velocity_df[2,] <- mean(unlist(ant_vel_list))
       }
       velocity_datalist[name] <-  as.list(velocity_df)
