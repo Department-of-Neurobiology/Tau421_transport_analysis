@@ -9,10 +9,15 @@
 #unoconv -f xlsx *.xls
 #for dir in *; do [ -d "$dir" ] && unoconv -f xlsx "$dir"/*.xls; done
 
-#v3
-#nrow(df_list[[i]])-1 > 24/49/99/149 instead of 1 - check again the lengths!! Should it be 10 less i.e. 14,39...? 
-#check that the lists to write out are empty (if there are no long trajectories for the cell) if (n != 0)  and if(length(changes_datalist) != 0) 
-#added
+#v4
+#added velocity counter for moving fractions
+#* first
+# *
+#   *
+#     *
+#       * last
+#(df_list[[i]]$smoothed_x_displacement[[j]]-df_list[[i]]$smoothed_x_displacement[[j-1]])/(df_list[[i]]$Time[[j]]-df_list[[i]]$Time[[j-1]])
+
 ###############################################
 #Libraries
 library(readxl)
@@ -24,14 +29,14 @@ library(stringr)
 library(plotly)
 library(zoo)
 library(ggpubr)
-library(rlist)
 #Set working directory
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) 
-#test with 
-#condition <- "Tau441_001percentDMSO"
+#before #condition <- "Tau441"
 condition_folders <- Sys.glob(file.path("Tau*"))
+condition_folders
 for (condition in condition_folders) {
-  #print(condition)
+  #condition <- "Tau421"
+  print(condition)
   setwd(paste("C:/Users/NITru/Downloads/CellSpecificData_ReExport/",condition,sep=""))
   create_empty_table <- function(num_rows, num_cols) {
     frame <- data.frame(matrix(NA, nrow = num_rows, ncol = num_cols))
@@ -137,13 +142,15 @@ for (condition in condition_folders) {
       scale_x_continuous(breaks = seq(-5, 5, by = 0.5))
     
     df_subset_naomit <- na.omit(df_subset, cols="delta_x")
-    #Filtering: if previous and next are same, change the middle one for next
-    #make for TrackID
+    
+    #######
+    ### Filtering: if previous and next are same, change the middle one for next
+    #######
     count=0
     df_list_2 <- list()
-    df_list_2 <- split(df_subset_naomit, df_subset_naomit$TrackID)
+    df_list_2 <- split(df_subset_naomit, df_subset_naomit$TrackID) #make split list for TrackID
     for(i in 1:length(df_list_2)){
-      if (nrow(df_list_2[[i]])-1 > 1) { #24...
+      if (nrow(df_list_2[[i]])-1 > 24) {
         for (j in 2:(nrow(df_list_2[[i]])-1)) {
           state <- ifelse(df_list_2[[i]]$motion[[j]]==df_list_2[[i]]$motion[[j-1]],"same","different")
           if (state=="different" ) {
@@ -160,7 +167,7 @@ for (condition in condition_folders) {
     #print(paste("Reset state", count, "times"))
     
     df_subset_naomit$motion <- as.factor(df_subset_naomit$motion)
-    summary(df_subset_naomit$motion)
+    summary(df_subset_naomit$motion)[1]
     
     ggplot(df_subset_naomit, aes(x = smoothed_x_displacement, y = Time)) + 
       #geom_path(data = df_subset_naomit, aes(x = smoothed_x_displacement, y = Time)) +
@@ -173,14 +180,16 @@ for (condition in condition_folders) {
       scale_y_reverse() +
       scale_x_continuous(breaks = seq(-5, 5, by = 0.5))
     
-    #count state fractions
+    #######
+    ### Count state fractions
+    #######
     df_list_3 <- list()
     df_list_3 <- split(df_subset_naomit, df_subset_naomit$TrackID)
     
     fractions_datalist <- list()
     fractions_df <- create_empty_table(3,1)
     changes_datalist <- list()
-    state_changes_df <- create_empty_table(8,1)
+    state_changes_df <- create_empty_table(6,1)
     #for each trajectory creates data lists for further assembly into tables
     for(i in 1:length(df_list_3)){
       #set row names later as trajectory IDs
@@ -193,12 +202,7 @@ for (condition in condition_folders) {
       ant_retr=0
       stat_retr=0
       stat_ant=0
-      
-      #additional columns to count all changes to and from stops
-      all_stat=0
-      stat_all=0
-      
-      if (nrow(df_list_3[[i]])-1 > 1) { #24...
+      if (nrow(df_list_3[[i]])-1 > 24) {
         #state percentage for each trajectory - IS IT REASONABLE? then further on they will be taken as mean for each cell
         fractions_df[1,] <- 100*summary(df_list_3[[i]]$motion)[1]/sum(summary(df_list_3[[i]]$motion))
         fractions_df[2,] <- 100*summary(df_list_3[[i]]$motion)[2]/sum(summary(df_list_3[[i]]$motion))
@@ -225,15 +229,6 @@ for (condition in condition_folders) {
             if (df_list_3[[i]]$motion[[j]]=="anterograde" & df_list_3[[i]]$motion[[j-1]]=="stationary") {
               stat_ant=stat_ant+1
             }
-            
-            #additional columns to count all changes to and from stops
-            if ((df_list_3[[i]]$motion[[j]]=="anterograde" | df_list_3[[i]]$motion[[j]]=="retrograde") & df_list_3[[i]]$motion[[j-1]]=="stationary") {
-              stat_all=stat_all+1
-            }
-            if (df_list_3[[i]]$motion[[j]]=="stationary" & (df_list_3[[i]]$motion[[j-1]]=="anterograde" | df_list_3[[i]]$motion[[j-1]]=="retrograde")) {
-              all_stat=all_stat+1
-            }
-            
           }  
         }
         #relative to trajectory length, before was not divided, beware of the gaps time!=tracked_spots*0.2, can be higher, better take from Tibco table
@@ -246,13 +241,58 @@ for (condition in condition_folders) {
           state_changes_df[4,] <- ant_retr/track_duration
           state_changes_df[5,] <- stat_retr/track_duration
           state_changes_df[6,] <- stat_ant/track_duration
-          state_changes_df[7,] <- all_stat/track_duration
-          state_changes_df[8,] <- stat_all/track_duration
           changes_datalist[name] <-  as.list(state_changes_df)
+        }
+        
+        
+        #count velocities
+        df_list_4 <- list()
+        df_list_4 <- split(df_subset_naomit, df_subset_naomit$TrackID)
+        
+        velocities_datalist <- list()
+        velocities_df <- create_empty_table(1,1)
+        
+        #for each trajectory creates data lists for further assembly into tables
+        first_point <- 0
+        last_point <- 0
+        velocity <- 0
+        for(i in 1:length(df_list_4)){
+          #set row names later as trajectory IDs
+          name <- df_list_3[[i]]$TrackID[1]
+          for (j in 2:(nrow(df_list_4[[i]])-1)) {
+            #print(first_point)
+            print(last_point)
+            state_change <- ifelse(df_list_4[[i]]$motion[[j]]==df_list_4[[i]]$motion[[j-1]],"same","different")
+            if (state_change=="same") {
+              last_point <- last_point + 1
+            }
+            if (state_change=="different" & last_point != 1) {
+              if (df_list_4[[i]]$motion[[j-1]]=="retrograde") {
+                Delta_x <- df_list_4[[i]]$smoothed_x_displacement[[last_point]]-df_list_4[[i]]$smoothed_x_displacement[[first_point]]
+                Delta_time <-df_list_4[[i]]$Time[[last_point]]-df_list_4[[i]]$Time[[first_point]]
+                velocity <- Delta_x/Delta_time
+                print(velocity)
+                velocities_df[1,] <- velocity
+                first_point <- j
+                
+              }
+              if (df_list_4[[i]]$motion[[j-1]]=="anterograde") {
+                Delta_x <- df_list_4[[i]]$smoothed_x_displacement[[last_point]]-df_list_4[[i]]$smoothed_x_displacement[[first_point]]
+                Delta_time <-df_list_4[[i]]$Time[[last_point]]-df_list_4[[i]]$Time[[first_point]]
+                velocity <- Delta_x/Delta_time
+                print(velocity)
+                velocities_df[1,] <- velocity
+                first_point <- j
+              }
+            }
+            velocities_df[1,] <- velocity
+            velocities_datalist[name] <-  as.list(velocities_df)
+            }    
+          }
         }
       }
     }
-
+    
     if(length(fractions_datalist) != 0) {
     assembled_state_fractions <- as.data.frame(do.call(rbind, fractions_datalist))
     assembled_state_fractions <- setNames(assembled_state_fractions,c("Anterograde","Retrograde","Stationary"))
@@ -264,22 +304,21 @@ for (condition in condition_folders) {
     
     if(length(changes_datalist) != 0) {
       assembled_state_changes <- as.data.frame(do.call(rbind, changes_datalist))
-      assembled_state_changes <- setNames(assembled_state_changes,c("RS","AS","RA","AR","SR","SA","all_to_stop","stop_to_all"))
+      assembled_state_changes <- setNames(assembled_state_changes,c("RS","AS","RA","AR","SR","SA"))
       #barplot(t(assembled_state_changes), legend = colnames(assembled_state_changes))
       assembled_state_changes_out <- assembled_state_changes
       assembled_state_changes_out$condition <- condition
       write.table(assembled_state_changes_out, paste(x, "_assembled_state_changes.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
     }
     
-    #CHECK for multiple files in folder - what if less 
+    #CHECK for multiple files in folder
     as.data.frame(colMeans(assembled_state_fractions))
     
     fractions_all_cells_datalist[x] <- as.data.frame(colMeans(assembled_state_fractions))
     changes_all_cells_datalist[x] <- as.data.frame(colMeans(assembled_state_changes))
     
-    # Density plot
     ggplot(df_subset_naomit, aes(x = delta_x)) + 
-      geom_density(aes(fill = motion, color = motion), alpha = 0.4) +
+      geom_density(aes(fill = motion), alpha = 0.4) +
       #geom_histogram(aes(fill = motion), alpha = 0.4,bins=500)+
       #theme_classic() +
       ggtitle("Trajectories, mobile fraction only") +
@@ -290,135 +329,8 @@ for (condition in condition_folders) {
     ggdensity(df_subset_naomit, x = "delta_x", 
               fill = "motion", color = "motion",
               add = "mean", rug = TRUE)
-    
-    # Violin plots
-    #View(df_subset_naomit)
-    ggplot(df_subset_naomit, aes(x = motion,y = delta_x, color = motion)) +
-      geom_violin(trim = FALSE,draw_quantiles = c(0.25, 0.5, 0.75)) +
-      geom_jitter(aes(color=as.factor(motion))) +
-      coord_flip() 
-      
-    
-    ####### velocity calculations
-    #count state fractions
-    df_list_4 <- list()
-    df_list_4 <- split(df_subset_naomit, df_subset_naomit$TrackID)
-    
-    velocity_datalist <- list()
-    velocity_df <- create_empty_table(2,1)
-    
-    #for each trajectory creates data lists for further assembly into tables
-    for(i in 1:length(df_list_4)){
-      #for checking
-      #i=1
-      #View(df_list_4[[i]])
-      
-      #set row names later as trajectory IDs
-      name <- df_list_4[[i]]$TrackID[1]
-      
-      #velocity for each directional part of trajectory
-      retr_vel=0
-      ant_vel=0
-      retr_vel_list <- list()
-      ant_vel_list <- list()
-      
-      if (nrow(df_list_4[[i]])-1 > 1) { #24...
-        for (j in 2:(nrow(df_list_4[[i]]))) {
-          first=j-1
-          state_change <- ifelse(df_list_4[[i]]$motion[[j]]==df_list_4[[i]]$motion[[j-1]],"same","different")
-          traj_end <- ifelse(j==nrow(df_list_4[[i]]),"end","middle")
-          #print(state_change)
-          if (first==1){
-            if (state_change=="different" && traj_end=="middle") {
-              #print(df_list_4[[i]]$motion[[first]])
-              if (df_list_4[[i]]$motion[[first]]=="retrograde" ) {
-                retr_vel = (df_list_4[[i]]$smoothed_x_displacement[[j-1]] - 0)/(df_list_4[[i]]$Time[[j-1]] - df_list_4[[i]]$Time[[first]] + 1)
-                retr_vel_list <- list.append(retr_vel_list,retr_vel)
-                #print(paste("retr",retr_vel,sep=" "))
-                first=j
-                next #is needed to avoid going from e.g. "SRAS" changes mistakes 
-              }
-              if (df_list_4[[i]]$motion[[first]]=="anterograde") {
-                ant_vel = (df_list_4[[i]]$smoothed_x_displacement[[j-1]] - 0)/(df_list_4[[i]]$Time[[j-1]] - df_list_4[[i]]$Time[[first]] + 1)
-                ant_vel_list <- list.append(ant_vel_list,ant_vel)
-                #print(paste("ant",ant_vel,sep=" "))
-                first=j
-                next
-              } 
-              if (df_list_4[[i]]$motion[[first]]=="stationary") {
-                first=j
-                next
-              }
-            }
-            if (traj_end=="end") {
-              if (df_list_4[[i]]$motion[[j]]=="retrograde") {
-                retr_vel = (df_list_4[[i]]$smoothed_x_displacement[[j]] - 0)/(df_list_4[[i]]$Time[[j]] - df_list_4[[i]]$Time[[first]] + 1)
-                retr_vel_list <- list.append(retr_vel_list,retr_vel)
-                #print(paste("retr",retr_vel,sep=" "))
-                break
-              }
-              if (df_list_4[[i]]$motion[[j]]=="anterograde") {
-                ant_vel = (df_list_4[[i]]$smoothed_x_displacement[[j]] - 0)/(df_list_4[[i]]$Time[[j]] - df_list_4[[i]]$Time[[first]] + 1)
-                ant_vel_list <- list.append(ant_vel_list,ant_vel)
-                #print(paste("ant",ant_vel,sep=" "))
-                break
-              }
-            }
-            next
-          }
-          if (first!=1){
-            if (state_change=="different" && traj_end=="middle") {
-              #print(df_list_4[[i]]$motion[[first]])
-              if (df_list_4[[i]]$motion[[first]]=="retrograde" ) {
-                retr_vel = (df_list_4[[i]]$smoothed_x_displacement[[j-1]] - df_list_4[[i]]$smoothed_x_displacement[[first-1]])/(df_list_4[[i]]$Time[[j-1]] - df_list_4[[i]]$Time[[first-1]])
-                retr_vel_list <- list.append(retr_vel_list,retr_vel)
-                #print(paste("retr",retr_vel,sep=" "))
-                first=j
-                next #is needed to avoid going from e.g. "SRAS" changes mistakes 
-              }
-              if (df_list_4[[i]]$motion[[first]]=="anterograde") {
-                ant_vel = (df_list_4[[i]]$smoothed_x_displacement[[j-1]] - df_list_4[[i]]$smoothed_x_displacement[[first-1]])/(df_list_4[[i]]$Time[[j-1]] - df_list_4[[i]]$Time[[first-1]])
-                ant_vel_list <- list.append(ant_vel_list,ant_vel)
-                #print(paste("ant",ant_vel,sep=" "))
-                first=j
-                next
-              } 
-              if (df_list_4[[i]]$motion[[first]]=="stationary") {
-                first=j
-                next
-              }
-            }
-            if (traj_end=="end") {
-              if (df_list_4[[i]]$motion[[j]]=="retrograde") {
-                retr_vel = (df_list_4[[i]]$smoothed_x_displacement[[j]] - df_list_4[[i]]$smoothed_x_displacement[[first-1]])/(df_list_4[[i]]$Time[[j]] - df_list_4[[i]]$Time[[first-1]])
-                retr_vel_list <- list.append(retr_vel_list,retr_vel)
-                #print(paste("retr",retr_vel,sep=" "))
-                break
-              }
-              if (df_list_4[[i]]$motion[[j]]=="anterograde") {
-                ant_vel = (df_list_4[[i]]$smoothed_x_displacement[[j]] - df_list_4[[i]]$smoothed_x_displacement[[first-1]])/(df_list_4[[i]]$Time[[j]] - df_list_4[[i]]$Time[[first-1]])
-                ant_vel_list <- list.append(ant_vel_list,ant_vel)
-                #print(paste("ant",ant_vel,sep=" "))
-                break
-              }
-            }
-          }
-        } 
-      } 
-      if(length(retr_vel_list) != 0) {
-        #print(unlist(retr_vel_list))
-        mean(unlist(retr_vel_list))
-        velocity_df[1,] <- mean(unlist(retr_vel_list))
-      }
-      if(length(ant_vel_list) != 0) {
-        #print(unlist(ant_vel_list))
-        mean(unlist(ant_vel_list))
-        velocity_df[2,] <- mean(unlist(ant_vel_list))
-      }
-      velocity_datalist[name] <-  as.list(velocity_df)
-    } 
   }
-    
+  assembled_state_fractions_all_cells
   assembled_state_fractions_all_cells <- as.data.frame(do.call(rbind, fractions_all_cells_datalist))
   assembled_state_fractions_all_cells <- setNames(assembled_state_fractions_all_cells,c("Anterograde","Retrograde","Stationary"))
   assembled_state_fractions_all_cells$condition <- condition
@@ -434,14 +346,6 @@ for (condition in condition_folders) {
   barplot(t(assembled_state_changes_all_cells), legend = colnames(assembled_state_changes_all_cells),las=2)
   dev.off()
   write.table(assembled_state_changes_all_cells, paste(condition, "_changes_final.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
-
-  assembled_velocities_all_cells <- as.data.frame(do.call(rbind, velocity_datalist))
-  assembled_velocities_all_cells <- setNames(assembled_velocities_all_cells,c("Retrograde","Anterograde"))
-  assembled_velocities_all_cells$condition <- condition
-  png(paste(condition, "_velocities_final.png", sep=""), width = 1000, height = 600) 
-  barplot(t(assembled_velocities_all_cells), legend = colnames(assembled_velocities_all_cells),las=2)
-  dev.off()
-  write.table(assembled_velocities_all_cells, paste(condition, "_velocities_final.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
 }
 
 
