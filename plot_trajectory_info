@@ -12,6 +12,7 @@ library(ggpubr)
 library(cowplot)
 library(rstatix)
 library(ggbeeswarm)
+library(plotly)
 #Set working directory
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 #read all files with selected name ending and extension
@@ -33,35 +34,35 @@ cbp <- c("#3122D2", "#574AE2", "#7D73E8", "#A29BEF",
 #converting data to between wide and long format
 data_long_states <- gather(data_merge_states, movement, measurement, RS:SA, factor_key=TRUE)
 
-ggplot(data_long_states,aes(x=condition,y=measurement))+
-  facet_wrap(~movement, ncol = 2) +
-  geom_violin() + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
-  geom_boxplot(width=0.3, aes(color=condition)) + #fill="white", alpha=0,
-  geom_point(size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
-  scale_color_manual(values = cbp) +
-  #scale_fill_brewer(palette="RdBu") + 
-  #theme_classic2() +
-  labs(fill = "Constructs and conditions") +
-  ylab("Number of state changes relative to trajectory length") +
-  scale_y_continuous(breaks = pretty(data_long_states$measurement, n = 5)) +
-  theme(axis.title.x=element_blank(),axis.text.x=element_blank()) +
-  stat_compare_means(label = "p.signif", method = "t.test",
-                     ref.group = "Tau441_001percentDMSO")
+# ggplot(data_long_states,aes(x=condition,y=measurement))+
+#   facet_wrap(~movement, ncol = 2) +
+#   geom_violin() + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
+#   geom_boxplot(width=0.3, aes(color=condition)) + #fill="white", alpha=0,
+#   geom_point(size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
+#   scale_color_manual(values = cbp) +
+#   #scale_fill_brewer(palette="RdBu") + 
+#   #theme_classic2() +
+#   labs(fill = "Constructs and conditions") +
+#   ylab("Number of state changes relative to trajectory length") +
+#   scale_y_continuous(breaks = pretty(data_long_states$measurement, n = 5)) +
+#   theme(axis.title.x=element_blank(),axis.text.x=element_blank()) +
+#   stat_compare_means(label = "p.signif", method = "t.test",
+#                      ref.group = "Tau441_001percentDMSO")
 
-pdf("states.pdf",  width=10, height=14)
-ggplot(data_long_states,aes(x=condition,y=measurement,color=condition))+ #,fill=movement
-  facet_wrap(~movement, ncol = 2) +
-  geom_boxplot(width=0.5) +
-  geom_point(position = position_jitterdodge()) + #seed = 1, dodge.width = 0.9  #, size = 0.5
-  scale_color_manual(values = cbp) +
-  #theme_minimal() +
-  labs(color = "Constructs and conditions") +
-  ylab("Number of state changes relative to track duration (s)") +
-  scale_y_continuous(breaks = pretty(data_long_states$measurement, n = 5)) +
-  theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank()) +
-  stat_compare_means(label = "p.signif", method = "t.test",
-                     ref.group = "Tau441_001percentDMSO")
-dev.off()
+# pdf("states.pdf",  width=10, height=14)
+# ggplot(data_long_states,aes(x=condition,y=measurement,color=condition))+ #,fill=movement
+#   facet_wrap(~movement, ncol = 2) +
+#   geom_boxplot(width=0.5) +
+#   geom_point(position = position_jitterdodge()) + #seed = 1, dodge.width = 0.9  #, size = 0.5
+#   scale_color_manual(values = cbp) +
+#   #theme_minimal() +
+#   labs(color = "Constructs and conditions") +
+#   ylab("Number of state changes relative to track duration (s)") +
+#   scale_y_continuous(breaks = pretty(data_long_states$measurement, n = 5)) +
+#   theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank()) +
+#   stat_compare_means(label = "p.signif", method = "t.test",
+#                      ref.group = "Tau441_001percentDMSO")
+# dev.off()
 
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
@@ -81,66 +82,72 @@ data_merge_states_trajectories$condition <- factor(data_merge_states_trajectorie
 #plot histograms for collected filtered results
 cbp <- c("#3122D2", "#574AE2", "#7D73E8", "#A29BEF",
          "#E83431", "#EF6F6C", "#F28E8C", "#F6AFAE")
+
+data_merge_states_trajectories
+
 #converting data to between wide and long format
 data_long_states_trajectories <- gather(data_merge_states_trajectories, movement, measurement, RS:SA, factor_key=TRUE)
 
-pdf("states_trajectories_violins.pdf",  width=10, height=14)
-ggplot(data_long_states_trajectories,aes(x=condition,y=measurement))+
-  facet_wrap(~movement, ncol = 2) +
-  geom_violin() + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
-  geom_boxplot(width=0.3, aes(color=condition), alpha=0) + #fill="white", alpha=0,
-  #geom_point(size = 0.5, aes(color=condition), position = position_jitterdodge(seed = 1, dodge.width = 0.9)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
-  geom_jitter(size = 0.5, aes(color=condition),position = position_jitter(seed = 1, width = 0.2)) +
-  scale_color_manual(values = cbp) +
-  #scale_fill_brewer(palette="RdBu") + 
-  #theme_classic2() +
-  labs(fill = "Constructs and conditions") +
-  ylab("Number of state changes relative to trajectory length") +
-  scale_y_continuous(breaks = pretty(data_long_states_trajectories$measurement, n = 5)) +
-  theme(axis.title.x=element_blank(),axis.text.x=element_blank()) +
-  stat_compare_means(label = "p.signif", method = "t.test",
-                     ref.group = "Tau441_001percentDMSO")
-dev.off()
+# pdf("states_trajectories_violins.pdf",  width=10, height=14)
+# ggplot(data_long_states_trajectories,aes(x=condition,y=measurement))+
+#   facet_wrap(~movement, ncol = 2) +
+#   geom_violin() + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
+#   geom_boxplot(width=0.3, aes(color=condition), alpha=0) + #fill="white", alpha=0,
+#   #geom_point(size = 0.5, aes(color=condition), position = position_jitterdodge(seed = 1, dodge.width = 0.9)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
+#   geom_jitter(size = 0.5, aes(color=condition),position = position_jitter(seed = 1, width = 0.2)) +
+#   scale_color_manual(values = cbp) +
+#   #scale_fill_brewer(palette="RdBu") + 
+#   #theme_classic2() +
+#   labs(fill = "Constructs and conditions") +
+#   ylab("Number of state changes relative to trajectory length") +
+#   scale_y_continuous(breaks = pretty(data_long_states_trajectories$measurement, n = 5)) +
+#   theme(axis.title.x=element_blank(),axis.text.x=element_blank()) +
+#   stat_compare_means(label = "p.signif", method = "t.test",
+#                      ref.group = "Tau441_001percentDMSO")
+# dev.off()
 
-#mean(data_long_states_trajectories$measurement[data_long_states_trajectories$condition == "Tau441_001percentDMSO"])
-#aggregate(measurement ~ condition, data = data_long_states_trajectories, function(x) c(m = mean(x), counts = length(x)) )
-#mean_states <- aggregate(measurement ~ condition + movement, data = data_long_states_trajectories, FUN= "mean" )
-#mean_states$measurement[mean_states$condition == "Tau441_001percentDMSO" & mean_states$movement == "RS"]
-#library(dplyr)
-#dt <- data_long_states_trajectories %>% group_by(movement) %>%
+####### did not work?
+# mean(data_long_states_trajectories$measurement[data_long_states_trajectories$condition == "Tau441_001percentDMSO"])
+# aggregate(measurement ~ condition, data = data_long_states_trajectories, function(x) c(m = mean(x), counts = length(x)) )
+# mean_states <- aggregate(measurement ~ condition + movement, data = data_long_states_trajectories, FUN= "mean" )
+# mean_states$measurement[mean_states$condition == "Tau441_001percentDMSO" & mean_states$movement == "RS"]
+# library(dplyr)
+# dt <- data_long_states_trajectories %>% group_by(movement) %>%
 #  mutate(mean = mean(measurement))
-#dt$mean[dt$condition == "Tau441_001percentDMSO"]
+# dt$mean[dt$condition == "Tau441_001percentDMSO"]
+#######
 
-pdf("states_trajectories.pdf",  width=10, height=14)
-ggplot(data_long_states_trajectories,aes(x=condition,y=measurement,color=condition))+ #,fill=movement
-  facet_wrap(~movement, ncol = 2) +
-  #geom_hline(yintercept = dt$mean[dt$condition == "Tau441_001percentDMSO"], linetype = 2) +
-  geom_boxplot(width=0.5) + #, outlier.shape = NA
-  #geom_beeswarm(size = 0.1) + #, binaxis = 'y', binwidth=0.001
-  scale_color_manual(values = cbp) +
-  #theme_minimal() +
-  labs(color = "Constructs and conditions") +
-  ylab("Number of state changes relative to track duration (s)") +
-  scale_y_continuous(breaks = pretty(data_long_states_trajectories$measurement, n = 5)) +
-  theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank()) +
-  stat_compare_means(label = "p.signif", method = "t.test",
-                     ref.group = "Tau441_001percentDMSO")
-dev.off()
 
-pdf("states_trajectories_beeswarm.pdf",  width=10, height=14)
-ggplot(data_long_states_trajectories,aes(x=condition,y=measurement,color=condition))+ #,fill=movement
-  facet_wrap(~movement, ncol = 2) +
-  geom_boxplot(width=0.5) + #, outlier.shape = NA
-  geom_beeswarm(size = 0.1) + #, binaxis = 'y', binwidth=0.001
-  scale_color_manual(values = cbp) +
-  #theme_minimal() +
-  labs(color = "Constructs and conditions") +
-  ylab("Number of state changes relative to track duration (s)") +
-  scale_y_continuous(breaks = pretty(data_long_states_trajectories$measurement, n = 5)) +
-  theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank()) +
-  stat_compare_means(label = "p.signif", method = "t.test",
-                     ref.group = "Tau441_001percentDMSO")
-dev.off()
+# pdf("states_trajectories.pdf",  width=10, height=14)
+# ggplot(data_long_states_trajectories,aes(x=condition,y=measurement,color=condition))+ #,fill=movement
+#   facet_wrap(~movement, ncol = 2) +
+#   #geom_hline(yintercept = dt$mean[dt$condition == "Tau441_001percentDMSO"], linetype = 2) +
+#   geom_boxplot(width=0.5) + #, outlier.shape = NA
+#   #geom_beeswarm(size = 0.1) + #, binaxis = 'y', binwidth=0.001
+#   scale_color_manual(values = cbp) +
+#   #theme_minimal() +
+#   labs(color = "Constructs and conditions") +
+#   ylab("Number of state changes relative to track duration (s)") +
+#   scale_y_continuous(breaks = pretty(data_long_states_trajectories$measurement, n = 5)) +
+#   theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank()) +
+#   stat_compare_means(label = "p.signif", method = "t.test",
+#                      ref.group = "Tau441_001percentDMSO")
+# dev.off()
+
+# pdf("states_trajectories_beeswarm.pdf",  width=10, height=14)
+# ggplot(data_long_states_trajectories,aes(x=condition,y=measurement,color=condition))+ #,fill=movement
+#   facet_wrap(~movement, ncol = 2) +
+#   geom_boxplot(width=0.5) + #, outlier.shape = NA
+#   geom_beeswarm(size = 0.1) + #, binaxis = 'y', binwidth=0.001
+#   scale_color_manual(values = cbp) +
+#   #theme_minimal() +
+#   labs(color = "Constructs and conditions") +
+#   ylab("Number of state changes relative to track duration (s)") +
+#   scale_y_continuous(breaks = pretty(data_long_states_trajectories$measurement, n = 5)) +
+#   theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank()) +
+#   stat_compare_means(label = "p.signif", method = "t.test",
+#                      ref.group = "Tau441_001percentDMSO")
+# dev.off()
 
 
 
@@ -150,22 +157,22 @@ data_long_states_trajectories_subset_stops <- data_long_states_trajectories[data
 #View(data_long_states_trajectories_subset_stops)
 my_comparisons <- list( c("Tau441", "Tau421"), c("Tau441_001percentDMSO", "Tau421_001percentDMSO"), c("Tau441_001percentDMSO", "Tau441_5nM_EpoD"),c("Tau441_001percentDMSO", "Tau441_25nM_EpoD"), c("Tau421_001percentDMSO", "Tau421_5nM_EpoD"), c("Tau421_001percentDMSO", "Tau421_25nM_EpoD") )
 
-pdf("states_trajectories_stops_together_all.pdf",  width=8, height=4)
-ggplot(data_long_states_trajectories_subset_stops,aes(x=condition,y=measurement,color=condition))+ #,fill=movement
-  #facet_wrap(~movement, ncol = 2) +
-  #geom_hline(yintercept = dt$mean[dt$condition == "Tau441_001percentDMSO"], linetype = 2) +
-  geom_boxplot(width=0.5) + #, outlier.shape = NA
-  #geom_beeswarm(size = 0.1) + #, binaxis = 'y', binwidth=0.001
-  scale_color_manual(values = cbp) +
-  #theme_minimal() +
-  labs(color = "Constructs and conditions") +
-  ylab("Number of state changes relative to track duration (s)") +
-  scale_y_continuous(breaks = pretty(data_long_states_trajectories$measurement, n = 5)) +
-  theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank()) +
-  stat_compare_means(label = "p.signif",comparisons = my_comparisons)#+
-  #stat_compare_means(label = "p.signif", method = "t.test",
-                     #ref.group = "Tau441_001percentDMSO")
-dev.off()
+# pdf("states_trajectories_stops_together_all.pdf",  width=8, height=4)
+# ggplot(data_long_states_trajectories_subset_stops,aes(x=condition,y=measurement,color=condition))+ #,fill=movement
+#   #facet_wrap(~movement, ncol = 2) +
+#   #geom_hline(yintercept = dt$mean[dt$condition == "Tau441_001percentDMSO"], linetype = 2) +
+#   geom_boxplot(width=0.5) + #, outlier.shape = NA
+#   #geom_beeswarm(size = 0.1) + #, binaxis = 'y', binwidth=0.001
+#   scale_color_manual(values = cbp) +
+#   #theme_minimal() +
+#   labs(color = "Constructs and conditions") +
+#   ylab("Number of state changes relative to track duration (s)") +
+#   scale_y_continuous(breaks = pretty(data_long_states_trajectories$measurement, n = 5)) +
+#   theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank()) +
+#   stat_compare_means(label = "p.signif",comparisons = my_comparisons)#+
+#   #stat_compare_means(label = "p.signif", method = "t.test",
+#                      #ref.group = "Tau441_001percentDMSO")
+# dev.off()
 
 
 
@@ -182,7 +189,113 @@ for (i in filenames){
 data_merge_fractions$condition <- as.factor(data_merge_fractions$condition)
 levels(data_merge_fractions$condition)
 #arrange the levels
-data_merge_fractions$condition <- factor(data_merge_fractions$condition, levels=c("Tau441", "Tau441_001percentDMSO", "Tau441_5nM_EpoD", "Tau441_25nM_EpoD", "Tau421", "Tau421_001percentDMSO", "Tau421_5nM_EpoD", "Tau421_25nM_EpoD"))
+data_merge_fractions$condition <- factor(data_merge_fractions$condition, levels=c("Tau441", "Tau421", "Tau441_001percentDMSO", "Tau421_001percentDMSO", 
+                                                              "Tau441_5nM_EpoD", "Tau421_5nM_EpoD", "Tau441_25nM_EpoD", "Tau421_25nM_EpoD"))
+data_merge_fractions$Moving <- data_merge_fractions$Anterograde + data_merge_fractions$Retrograde
+
+#relative bad ratio
+#data_merge_fractions$Relative <- data_merge_fractions$Moving/data_merge_fractions$Stationary
+######## 1a
+#relative new ratio
+data_merge_fractions$Relative <- data_merge_fractions$Stationary/(data_merge_fractions$Stationary+data_merge_fractions$Moving)
+write.table(data_merge_fractions[,c("condition",   "Relative")], paste("cell_means_", "data_merge_fractions", "_stat_to_all_ratio.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
+cbp <- c("#3122D2", "#E83431",
+         "#574AE2", "#EF6F6C",
+         "#7D73E8", "#F28E8C",
+         "#A29BEF","#F6AFAE")
+data_long_fractions <- gather(data_merge_fractions, fraction, measurement, Relative, factor_key=TRUE)
+ggplot(data_long_fractions,aes(x=condition,y=measurement,color=condition))+
+  geom_violin() +
+  geom_boxplot(width=0.2) +
+  geom_point(position = position_jitterdodge()) + #seed = 1, dodge.width = 0.9
+  scale_color_manual(values = cbp) +
+  theme_minimal() +
+  labs(color = "Constructs and conditions") +
+  ylab("Ratio of time spent not moving to all time") +
+  #stat_compare_means(ref.group = "Tau441", label = "p.signif", method = "t.test") + #, ref.group = "Tau441_001percentDMSO"
+  stat_compare_means(label = "p.signif",comparisons = my_comparisons) +
+  theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank()) 
+
+######## 1b
+#relative new ratio
+data_merge_fractions$Relative_mov <- data_merge_fractions$Stationary/(data_merge_fractions$Stationary+data_merge_fractions$Moving)
+write.table(data_merge_fractions[,c("condition",   "Relative_mov")], paste("cell_means_", "data_merge_fractions", "_moving_to_all_ratio.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
+cbp <- c("#3122D2", "#E83431",
+         "#574AE2", "#EF6F6C",
+         "#7D73E8", "#F28E8C",
+         "#A29BEF","#F6AFAE")
+data_long_fractions <- gather(data_merge_fractions, fraction, measurement, Relative_mov, factor_key=TRUE)
+ggplot(data_long_fractions,aes(x=condition,y=measurement,color=condition))+
+  geom_violin() +
+  geom_boxplot(width=0.2) +
+  geom_point(position = position_jitterdodge()) + #seed = 1, dodge.width = 0.9
+  scale_color_manual(values = cbp) +
+  theme_minimal() +
+  labs(color = "Constructs and conditions") +
+  ylab("Ratio of time spent not moving to all time") +
+  #stat_compare_means(ref.group = "Tau441", label = "p.signif", method = "t.test") + #, ref.group = "Tau441_001percentDMSO"
+  stat_compare_means(label = "p.signif",comparisons = my_comparisons) +
+  theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank()) 
+
+data_long_fractions_wo_treatment <- data_long_fractions[which(data_long_fractions$condition == "Tau441" | data_long_fractions$condition == "Tau421"),]
+cbp <- c("#3122D2", "#E83431")
+pdf("Density of ratios of time spent not moving to all time with mean no treatment.pdf",  width=5, height=5)
+ggdensity(data_long_fractions_wo_treatment, x = "measurement", 
+          fill = "condition", color = "condition",
+          add = "mean", rug = TRUE, alpha = .5) +
+  ylab("Density of ratios of time spent not moving to all time with mean") +
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  facet_grid(rows = vars(condition))
+dev.off()
+
+library(ggridges)
+# Add quantiles Q1, Q2 (median) and Q3
+ggplot(data_long_fractions_wo_treatment, 
+       aes(x = measurement, y = condition,
+           color = condition)) + #fill = condition, 
+  theme_bw() +
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  ylab("Density of ratios of time spent not moving to all time with median and quartiles") +
+  stat_density_ridges(quantile_lines = TRUE, aes(fill = condition), alpha = .2)
+
+
+data_long_fractions_with_treatment <- data_long_fractions[which(data_long_fractions$condition == "Tau441_001percentDMSO" | data_long_fractions$condition == "Tau421_001percentDMSO" | data_long_fractions$condition == "Tau441_5nM_EpoD" | data_long_fractions$condition == "Tau421_5nM_EpoD" | data_long_fractions$condition == "Tau441_25nM_EpoD" | data_long_fractions$condition == "Tau421_25nM_EpoD"),]
+cbp <- c("#574AE2", "#EF6F6C",
+         "#7D73E8", "#F28E8C",
+         "#A29BEF","#F6AFAE")
+pdf("Density of ratios of time spent not moving to all time with mean with treatment.pdf",  width=5, height=10)
+ggdensity(data_long_fractions_with_treatment, x = "measurement", 
+          fill = "condition", color = "condition",
+          add = "mean", rug = TRUE, alpha = .5) +
+  ylab("Density of ratios of time spent not moving to all time with mean") +
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  facet_grid(rows = vars(condition))
+dev.off()
+######## 1 additional
+cbp <- c("#3122D2", "#E83431",
+         "#574AE2", "#EF6F6C",
+         "#7D73E8", "#F28E8C",
+         "#A29BEF","#F6AFAE")
+ggplot(data_long_fractions, aes(x = measurement)) + 
+  geom_density(aes(color = condition), alpha = 0.4) +
+  #geom_histogram(aes(fill = condition), alpha = 0.4, bins=500)+
+  theme_minimal() +
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  ggtitle("Density of ratios of time spent not moving to all time") +
+  xlab("Delta_x") + 
+  ylab("Density")
+
+ggdensity(data_long_fractions, x = "measurement", 
+          fill = "condition", color = "condition",
+          add = "mean", rug = TRUE) +
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  facet_grid(rows = vars(condition))
+
 #converting data to between wide and long format
 data_long_fractions <- gather(data_merge_fractions, fraction, measurement, Anterograde:Stationary, factor_key=TRUE)
 #arrange the levels
@@ -243,7 +356,32 @@ levels(data_merge_fractions_trajectories$condition)
 data_merge_fractions_trajectories$condition <- factor(data_merge_fractions_trajectories$condition, levels=c("Tau441", "Tau441_001percentDMSO", "Tau441_5nM_EpoD", "Tau441_25nM_EpoD", "Tau421", "Tau421_001percentDMSO", "Tau421_5nM_EpoD", "Tau421_25nM_EpoD"))
 #converting data to between wide and long format
 data_long_fractions_trajectories <- gather(data_merge_fractions_trajectories, fraction, measurement, Anterograde:Stationary, factor_key=TRUE)
+
+
 #arrange the levels
+data_merge_fractions_trajectories$condition <- factor(data_merge_fractions_trajectories$condition, levels=c("Tau441", "Tau421", "Tau441_001percentDMSO", "Tau421_001percentDMSO", 
+                                                                                  "Tau441_5nM_EpoD", "Tau421_5nM_EpoD", "Tau441_25nM_EpoD", "Tau421_25nM_EpoD"))
+data_merge_fractions_trajectories$Moving <- data_merge_fractions_trajectories$Anterograde + data_merge_fractions_trajectories$Retrograde
+data_merge_fractions_trajectories$Relative <- data_merge_fractions_trajectories$Moving/data_merge_fractions_trajectories$Stationary
+write.table(data_merge_fractions_trajectories[,c("condition",   "Relative")], paste("cell_means_", "data_merge_fractions_trajectories", "_mov_to_stat_ratio.csv", sep=""), sep = ";",dec = '.', row.names = FALSE, col.names = TRUE)
+cbp <- c("#3122D2", "#E83431",
+         "#574AE2", "#EF6F6C",
+         "#7D73E8", "#F28E8C",
+         "#A29BEF","#F6AFAE")
+data_long_merge_fractions_trajectories <- gather(data_merge_fractions_trajectories, fraction, measurement, Relative, factor_key=TRUE)
+ggplot(data_long_merge_fractions_trajectories,aes(x=condition,y=measurement,color=condition))+
+  geom_violin(width=1) +
+  geom_point(position = position_jitterdodge()) + #seed = 1, dodge.width = 0.9
+  scale_color_manual(values = cbp) +
+  theme_minimal() +
+  labs(color = "Constructs and conditions") +
+  ylab("Ratio of time spent moving to not moving") +
+  stat_compare_means(ref.group = "Tau441", label = "p.signif", method = "t.test") + #, ref.group = "Tau441_001percentDMSO"
+  theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank()) 
+
+
+
+
 data_long_fractions_trajectories$fraction <- factor(data_long_fractions_trajectories$fraction, levels=c("Retrograde", "Stationary", "Anterograde"))
 cbp_fractions <- c("#f8766d", "#619cff", "#00ba38")
 #plot
@@ -388,6 +526,12 @@ my_comparisons <- list( c("Tau441", "Tau421"),
                         c("Tau441_001percentDMSO", "Tau441_25nM_EpoD"), 
                         c("Tau421_25nM_EpoD", "Tau421_001percentDMSO"))
 
+meanFunction <- function(x){
+  return(data.frame(y=round(mean(x),2),label=round(mean(x,na.rm=T),2)))}
+medianFunction <- function(x){
+  return(data.frame(y=round(median(x),2),label=round(median(x,na.rm=T),2)))}
+
+
 ggplot(data_long_velocities,aes(x=condition,y=measurement))+
   facet_wrap(~movement, ncol = 2) +
   geom_violin(width=1.5) + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
@@ -400,9 +544,11 @@ ggplot(data_long_velocities,aes(x=condition,y=measurement))+
   ylab("Velocity (d(smoothed_disp)/d(time))") +
   scale_y_continuous(breaks = pretty(data_long_velocities$measurement, n = 5)) +
   theme(axis.title.x=element_blank(),axis.text.x=element_blank()) +
-  stat_compare_means(comparisons = my_comparisons, label = "p.signif")
+  #stat_compare_means(comparisons = my_comparisons, label = "p.signif") +
+  stat_summary(fun.data = medianFunction, geom ="text", color = "black", size = 3, vjust = 1.3) +
+  stat_summary(fun.y = mean, geom = "point",colour = "darkred", size=1) +
   #stat_pvalue_manual(stat.test)
-  #stat_compare_means(label = "p.signif", method = "t.test", ref.group = "Tau441_001percentDMSO")
+  stat_compare_means(label = "p.signif", method = "t.test", ref.group = "Tau441_001percentDMSO")
 
 
 ggplot(data_long_velocities,aes(x=condition,y=measurement))+
@@ -416,5 +562,50 @@ ggplot(data_long_velocities,aes(x=condition,y=measurement))+
   ylab("Velocity (d(smoothed_disp)/d(time)), A&R combined") +
   scale_y_continuous(breaks = pretty(data_long_velocities$measurement, n = 5)) +
   theme(axis.title.x=element_blank(),axis.text.x=element_blank()) + #legend.position = "none"
-  stat_compare_means(comparisons = my_comparisons, label = "p.signif")
-  #stat_compare_means(label = "p.signif", method = "t.test", ref.group = "Tau441_001percentDMSO")
+  #stat_compare_means(comparisons = my_comparisons, label = "p.signif") +
+  stat_summary(fun.data = meanFunction, geom ="text", color = "black", size = 3, vjust = 1.3) +
+  stat_summary(fun.y = mean, geom = "point",colour = "darkred", size=1) +
+  #stat_pvalue_manual(stat.test)
+  stat_compare_means(label = "p.signif", method = "t.test", ref.group = "Tau441_001percentDMSO")
+
+data_long_velocities_wo_treatment <- data_long_velocities[which(data_long_velocities$condition == "Tau441" | data_long_velocities$condition == "Tau421"),]
+cbp <- c("#3122D2", "#E83431")
+pdf("Velocity no treatment.pdf",  width=5, height=5)
+ggplot(data_long_velocities_wo_treatment,aes(x=condition,y=measurement))+
+  facet_wrap(~movement, ncol = 2) +
+  geom_violin(aes(color=condition, fill=condition), alpha = 0.2) + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_boxplot(width=0.05) +
+  geom_point(aes(color=condition)) + 
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  theme_bw() +
+  ylab("Velocity (d(smoothed_disp)/d(time)), A&R combined") +
+  theme(axis.title.x=element_blank(),axis.text.x=element_blank()) + #legend.position = "none"
+  #stat_compare_means(comparisons = my_comparisons, label = "p.signif") +
+  #stat_summary(fun.data = meanFunction, geom ="text", color = "black", size = 3, vjust = 1.3) +
+  stat_summary(fun = mean, geom = "point",colour = "black", size=3) +
+  scale_y_continuous(breaks = pretty(data_long_velocities_wo_treatment$measurement, n = 10)) +
+  stat_compare_means(label = "p.signif", method = "t.test", ref.group = "Tau441")
+dev.off()
+
+data_long_velocities_with_treatment <- data_long_velocities[which(data_long_velocities$condition == "Tau441_001percentDMSO" | data_long_velocities$condition == "Tau421_001percentDMSO" | data_long_velocities$condition == "Tau441_5nM_EpoD" | data_long_velocities$condition == "Tau421_5nM_EpoD" | data_long_velocities$condition == "Tau441_25nM_EpoD" | data_long_velocities$condition == "Tau421_25nM_EpoD"),]
+cbp <- c("#574AE2", "#EF6F6C",
+         "#7D73E8", "#F28E8C",
+         "#A29BEF","#F6AFAE")
+pdf("Velocity with treatment.pdf",  width=5, height=5)
+ggplot(data_long_velocities_with_treatment,aes(x=condition,y=measurement))+
+  facet_wrap(~movement, ncol = 2) +
+  geom_violin(aes(color=condition, fill=condition), alpha = 0.2) + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_boxplot(width=0.1) +
+  geom_point(aes(color=condition)) + 
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  theme_bw() +
+  ylab("Velocity (d(smoothed_disp)/d(time)), A&R combined") +
+  theme(axis.title.x=element_blank(),axis.text.x=element_blank()) + #legend.position = "none"
+  #stat_compare_means(comparisons = my_comparisons, label = "p.signif") +
+  #stat_summary(fun.data = meanFunction, geom ="text", color = "black", size = 3, vjust = 1.3) +
+  stat_summary(fun = mean, geom = "point",colour = "black", size=3) +
+  scale_y_continuous(breaks = pretty(data_long_velocities_with_treatment$measurement, n = 10)) +
+  stat_compare_means(label = "p.signif", method = "t.test", ref.group = "Tau441_001percentDMSO")
+dev.off()
