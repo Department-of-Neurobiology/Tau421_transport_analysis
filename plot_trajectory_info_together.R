@@ -22,47 +22,106 @@ data_merge_states <- data.frame()
 #loop through all files
 for (i in filenames){  
   x <- read.table(i, sep = ";",header = TRUE)
+  x <- setNames(x,c("RS","AS","RA","AR","SR","SA","all_to_stop","stop_to_all","retr_to_stop_ant","ant_to_stop_retr","condition"))
   print(head(x))
   data_merge_states <- rbind(data_merge_states, x)
 }
-#data_merge_states$condition <- as.factor(data_merge_states$condition)
+
+# ALL STATE CHANGES
+data_long_states <- gather(data_merge_states, movement, measurement, RS:ant_to_stop_retr, factor_key=TRUE)
+#WITHOUT TREATMENT
+data_long_states_wo_treatment <- data_long_states[which(data_long_states$condition == "Tau441" | data_long_states$condition == "Tau421"),]
 #To order the conditions manually
-data_merge_states$condition <- factor(data_merge_states$condition, levels=c("Tau441", "Tau441_001percentDMSO", "Tau441_5nM_EpoD", "Tau441_25nM_EpoD", "Tau421", "Tau421_001percentDMSO", "Tau421_5nM_EpoD", "Tau421_25nM_EpoD"))
+data_long_states_wo_treatment$condition <- factor(data_long_states_wo_treatment$condition, levels=c("Tau441", "Tau421"))
+#my_comparisons <- list( c("Tau441", "Tau421"))
+cbp <- c("#3122D2", "#E83431")
+p0 <- ggplot(data_long_states_wo_treatment,aes(x=condition,y=measurement))+
+  geom_violin() + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_boxplot(width=0.3, aes(color=condition)) + #fill="white", alpha=0,
+  geom_jitter(size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
+  scale_color_manual(values = cbp) +
+  theme_classic() +
+  labs(fill = "Constructs and conditions") +
+  ylab("Number of state changes relative to trajectory length") +
+  scale_y_continuous(breaks = pretty(data_long_states$measurement, n = 5)) +
+  theme(legend.position = "none",
+        legend.title = element_blank(),
+        axis.title.x=element_blank()) +
+  stat_compare_means(label = "p.signif", method = "t.test", ref.group = "Tau441")
+svg("state_changes_wo_treatment_alllll.svg",  width=4, height=3)
+p0
+dev.off()
+
+#WITHOUT TREATMENT
+data_long_states_wo_treatment <- data_long_states[which(data_long_states$condition == "Tau441" | data_long_states$condition == "Tau421"),]
+#ONLY RELEVANT
+data_long_states_wo_treatment <- data_long_states_wo_treatment[which(data_long_states_wo_treatment$movement == "all_to_stop" | 
+                                                                       data_long_states_wo_treatment$movement == "stop_to_all" | 
+                                                                       data_long_states_wo_treatment$movement == "retr_to_stop_ant"| 
+                                                                       data_long_states_wo_treatment$movement == "ant_to_stop_retr"),]
+#To order the conditions manually
+data_long_states_wo_treatment$condition <- factor(data_long_states_wo_treatment$condition, levels=c("Tau441", "Tau421"))
+#my_comparisons <- list( c("Tau441", "Tau421"))
+cbp <- c("#3122D2", "#E83431")
+p <- ggplot(data_long_states_wo_treatment,aes(x=condition,y=measurement))+
+  facet_wrap(~movement, ncol = 2) +
+  geom_violin() + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_boxplot(width=0.3, aes(color=condition)) + #fill="white", alpha=0,
+  geom_jitter(size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
+  scale_color_manual(values = cbp) +
+  theme_classic() +
+  labs(fill = "Constructs and conditions") +
+  ylab("Number of state changes relative to trajectory length") +
+  scale_y_continuous(breaks = pretty(data_long_states$measurement, n = 5)) +
+  theme(legend.position = "none",
+        legend.title = element_blank(),
+        axis.title.x=element_blank()) +
+  # theme(axis.text.x=element_blank(),
+  #       axis.ticks.x=element_blank()) +
+  #stat_compare_means(label = "p.signif",comparisons = my_comparisons)+
+  stat_compare_means(label = "p.signif", method = "t.test", ref.group = "Tau441")
+svg("state_changes_wo_treatment.svg",  width=4, height=5)
+p
+dev.off()
+
+#WITHOUT TREATMENT
+data_long_states_with_treatment <- data_long_states[which(data_long_states$condition == "Tau441_001percentDMSO" | 
+                                                          data_long_states$condition == "Tau421_001percentDMSO" |
+                                                          data_long_states$condition == "Tau441_5nM_EpoD" |
+                                                          data_long_states$condition == "Tau421_5nM_EpoD"),]
+#ONLY RELEVANT
+data_long_states_with_treatment <- data_long_states_with_treatment[which(data_long_states_with_treatment$movement == "all_to_stop" | 
+                                                                           data_long_states_with_treatment$movement == "stop_to_all" | 
+                                                                           data_long_states_with_treatment$movement == "retr_to_stop_ant"| 
+                                                                           data_long_states_with_treatment$movement == "ant_to_stop_retr"),]
+#To order the conditions manually
+data_long_states_with_treatment$condition <- factor(data_long_states_with_treatment$condition, levels=c("Tau441_001percentDMSO", "Tau421_001percentDMSO", "Tau441_5nM_EpoD", "Tau421_5nM_EpoD"))
 #plot histograms for collected filtered results
-cbp <- c("#3122D2", "#574AE2", "#7D73E8", "#A29BEF",
-          "#E83431", "#EF6F6C", "#F28E8C", "#F6AFAE")
+cbp <- c("#7D73E8",
+         "#E83431", 
+         "#A29BEF",
+         "#EF6F6C")
 #converting data to between wide and long format
-data_long_states <- gather(data_merge_states, movement, measurement, RS:SA, factor_key=TRUE)
 
-# ggplot(data_long_states,aes(x=condition,y=measurement))+
-#   facet_wrap(~movement, ncol = 2) +
-#   geom_violin() + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
-#   geom_boxplot(width=0.3, aes(color=condition)) + #fill="white", alpha=0,
-#   geom_point(size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
-#   scale_color_manual(values = cbp) +
-#   #scale_fill_brewer(palette="RdBu") + 
-#   #theme_classic2() +
-#   labs(fill = "Constructs and conditions") +
-#   ylab("Number of state changes relative to trajectory length") +
-#   scale_y_continuous(breaks = pretty(data_long_states$measurement, n = 5)) +
-#   theme(axis.title.x=element_blank(),axis.text.x=element_blank()) +
-#   stat_compare_means(label = "p.signif", method = "t.test",
-#                      ref.group = "Tau441_001percentDMSO")
-
-# pdf("states.pdf",  width=10, height=14)
-# ggplot(data_long_states,aes(x=condition,y=measurement,color=condition))+ #,fill=movement
-#   facet_wrap(~movement, ncol = 2) +
-#   geom_boxplot(width=0.5) +
-#   geom_point(position = position_jitterdodge()) + #seed = 1, dodge.width = 0.9  #, size = 0.5
-#   scale_color_manual(values = cbp) +
-#   #theme_minimal() +
-#   labs(color = "Constructs and conditions") +
-#   ylab("Number of state changes relative to track duration (s)") +
-#   scale_y_continuous(breaks = pretty(data_long_states$measurement, n = 5)) +
-#   theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank()) +
-#   stat_compare_means(label = "p.signif", method = "t.test",
-#                      ref.group = "Tau441_001percentDMSO")
-# dev.off()
+p2 <- ggplot(data_long_states_with_treatment,aes(x=condition,y=measurement))+
+  facet_wrap(~movement, ncol = 2) +
+  geom_violin() + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_boxplot(width=0.3, aes(color=condition)) + #fill="white", alpha=0,
+  geom_jitter(size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
+  scale_color_manual(values = cbp) +
+  theme_classic() +
+  labs(fill = "Constructs and conditions") +
+  ylab("Number of state changes relative to trajectory length") +
+  scale_y_continuous(breaks = pretty(data_long_states$measurement, n = 5)) +
+  theme(legend.position = "none",
+        legend.title = element_blank(),
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank()) +
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "Tau441_001percentDMSO")
+svg("state_changes_with_treatment.svg",  width=5, height=4)
+p2
+dev.off()
 
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
@@ -89,21 +148,21 @@ data_merge_states_trajectories
 data_long_states_trajectories <- gather(data_merge_states_trajectories, movement, measurement, RS:SA, factor_key=TRUE)
 
 # pdf("states_trajectories_violins.pdf",  width=10, height=14)
-# ggplot(data_long_states_trajectories,aes(x=condition,y=measurement))+
-#   facet_wrap(~movement, ncol = 2) +
-#   geom_violin() + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
-#   geom_boxplot(width=0.3, aes(color=condition), alpha=0) + #fill="white", alpha=0,
-#   #geom_point(size = 0.5, aes(color=condition), position = position_jitterdodge(seed = 1, dodge.width = 0.9)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
-#   geom_jitter(size = 0.5, aes(color=condition),position = position_jitter(seed = 1, width = 0.2)) +
-#   scale_color_manual(values = cbp) +
-#   #scale_fill_brewer(palette="RdBu") + 
-#   #theme_classic2() +
-#   labs(fill = "Constructs and conditions") +
-#   ylab("Number of state changes relative to trajectory length") +
-#   scale_y_continuous(breaks = pretty(data_long_states_trajectories$measurement, n = 5)) +
-#   theme(axis.title.x=element_blank(),axis.text.x=element_blank()) +
-#   stat_compare_means(label = "p.signif", method = "t.test",
-#                      ref.group = "Tau441_001percentDMSO")
+ggplot(data_long_states_trajectories,aes(x=condition,y=measurement))+
+  facet_wrap(~movement, ncol = 2) +
+  geom_violin() + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_boxplot(width=0.3, aes(color=condition), alpha=0) + #fill="white", alpha=0,
+  #geom_point(size = 0.5, aes(color=condition), position = position_jitterdodge(seed = 1, dodge.width = 0.9)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
+  geom_jitter(size = 0.5, aes(color=condition),position = position_jitter(seed = 1, width = 0.2)) +
+  scale_color_manual(values = cbp) +
+  #scale_fill_brewer(palette="RdBu") +
+  #theme_classic2() +
+  labs(fill = "Constructs and conditions") +
+  ylab("Number of state changes relative to trajectory length") +
+  scale_y_continuous(breaks = pretty(data_long_states_trajectories$measurement, n = 5)) +
+  theme(axis.title.x=element_blank(),axis.text.x=element_blank()) +
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "Tau441_001percentDMSO")
 # dev.off()
 
 ####### did not work?
