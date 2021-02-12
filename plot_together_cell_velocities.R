@@ -292,3 +292,23 @@ arrange_with
 svg("data_long_velocities_with_treatment_arrange_all.svg",  width=10, height=6)
 arrange_with
 dev.off()
+
+
+arrange_all <- ggarrange(p_vel, # First row
+                          ggarrange(p_vel_mean, p_vel_max, ncol = 2, labels = c("B", "C")), # Second row with box and dot plots
+                          ggarrange(p_vel_treat, # First row
+                                    ggarrange(p_vel_treat_mean, p_vel_treat_max, ncol = 2, labels = c("E", "F")), # Second row with box and dot plots
+                                    nrow = 2, 
+                                    #common.legend = TRUE,
+                                    #heights = c(4,2),
+                                    labels = "D" # Labels of the first plot
+                          ),
+                          nrow = 3, 
+                          heights = c(1,1,2),
+                          common.legend = TRUE,
+                          labels = "A" # Labels of the first plot
+) 
+arrange_all
+svg("data_long_velocities_arrange_all.svg",  width=10, height=12)
+arrange_all
+dev.off()
