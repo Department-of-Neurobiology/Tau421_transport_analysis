@@ -13,6 +13,12 @@ library(cowplot)
 library(rstatix)
 library(ggbeeswarm)
 library(plotly)
+
+cbp <- c("#034e61", "#a00000",
+         "#034e61", "#a00000",
+         "#034e61", "#a00000",
+         "#034e61", "#a00000")
+
 #Set working directory
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 #read all files with selected name ending and extension
@@ -23,49 +29,41 @@ data_merge_states <- data.frame()
 for (i in filenames){  
   x <- read.table(i, sep = ";",header = TRUE)
   #x <- setNames(x,c("RS","AS","RA","AR","SR","SA","all_to_stop","stop_to_all","retr_to_stop_ant","ant_to_stop_retr", "all_changes","condition")) #changed it in main so not required
-  print(head(x))
+  #print(head(x))
   data_merge_states <- rbind(data_merge_states, x)
 }
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 # ALL STATE CHANGES
 data_long_states <- gather(data_merge_states, movement, measurement, RS:all_changes, factor_key=TRUE)
+
+#######Rename conditions and add treatment column
+data_long_states$treatment <- "treatment"
+
+data_long_states$treatment[data_long_states$condition == 'Tau441'] <- 'no_treat'
+data_long_states$treatment[data_long_states$condition == 'Tau421'] <- 'no_treat'
+data_long_states$treatment[data_long_states$condition == 'Tau441_001percentDMSO'] <- 'carrier'
+data_long_states$treatment[data_long_states$condition == 'Tau421_001percentDMSO'] <- 'carrier'
+data_long_states$treatment[data_long_states$condition == 'Tau441_5nM_EpoD'] <- 'EpoD'
+data_long_states$treatment[data_long_states$condition == 'Tau421_5nM_EpoD'] <- 'EpoD'
+data_long_states$treatment[data_long_states$condition == 'Tau441_25nM_EpoD'] <- 'EpoD_25nM'
+data_long_states$treatment[data_long_states$condition == 'Tau421_25nM_EpoD'] <- 'EpoD_25nM'
+
+data_long_states$condition[data_long_states$condition == 'Tau441'] <- 'wt'
+data_long_states$condition[data_long_states$condition == 'Tau421'] <- 'C3'
+data_long_states$condition[data_long_states$condition == 'Tau441_001percentDMSO'] <- 'wt'
+data_long_states$condition[data_long_states$condition == 'Tau421_001percentDMSO'] <- 'C3'
+data_long_states$condition[data_long_states$condition == 'Tau441_5nM_EpoD'] <- 'wt'
+data_long_states$condition[data_long_states$condition == 'Tau421_5nM_EpoD'] <- 'C3'
+data_long_states$condition[data_long_states$condition == 'Tau441_25nM_EpoD'] <- 'wt'
+data_long_states$condition[data_long_states$condition == 'Tau421_25nM_EpoD'] <- 'C3'
+
+
 #WITHOUT TREATMENT
-data_long_states_wo_treatment <- data_long_states[which(data_long_states$condition == "Tau441" | data_long_states$condition == "Tau421"),]
+data_long_states_wo_treatment <- data_long_states[which(data_long_states$treatment == "no_treat"),]
 #To order the conditions manually
-data_long_states_wo_treatment$condition <- factor(data_long_states_wo_treatment$condition, levels=c("Tau441", "Tau421"))
-my_comparisons <- list( c("Tau441", "Tau421"))
-#cbp <- c("#3122D2", "#E83431")
-cbp <- c("#034e61", "#a00000")
-# 
-# 
-# ####THAT IS WRONG ACTUALLY, they should be summed not plotted together
-# data_long_states_wo_all_changes_summed <- data_long_states_wo_treatment[which(data_long_states_wo_treatment$movement  == "RS" | data_long_states_wo_treatment$movement == "SR"  | data_long_states_wo_treatment$movement == "AR"  | data_long_states_wo_treatment$movement == "RA"  | data_long_states_wo_treatment$movement == "SA"  | data_long_states_wo_treatment$movement == "AS"),]
-# data_long_states_wo_all_changes_summed$movement
-# data_long_states_wo_all_changes_summed <- data_long_states_wo_all_changes_summed[!is.infinite(data_long_states_wo_all_changes_summed$measurement),]
-# data_long_states_wo_all_changes_summed <- data_long_states_wo_all_changes_summed[!is.na(data_long_states_wo_all_changes_summed$measurement),]
-# 
-# 
-# p_states_all_summed <- ggplot(data_long_states_wo_all_changes_summed,aes(x=condition,y=measurement))+
-#   geom_boxplot(width=0.5, aes(fill=condition), alpha=0.2) + #,draw_quantiles = c(0.25, 0.5, 0.75)
-#   geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
-#   scale_color_manual(values = cbp) +
-#   scale_fill_manual(values = cbp) +
-#   theme_classic() +
-#   theme(legend.position = "none",
-#         plot.title = element_text(color = "black", size = 10),
-#         axis.ticks = element_line(colour="black"),
-#         axis.text.x = element_text(color = "black", size = 10),
-#         axis.text.y = element_text(color = "black", size = 10),
-#         axis.title.x = element_blank(),
-#         axis.title.y = element_blank()) +
-#   labs(fill = "Constructs and conditions") +
-#   ggtitle("Number of state changes \nrelative to trajectory length") +
-#   scale_y_continuous(limits = c(0,0.25), breaks = seq(0,0.25,by = 0.05)) +
-#   stat_compare_means(label = "p.signif", method = "t.test", comparisons = my_comparisons)
-# p_states_all_summed
-# svg("state_changes_wo_treatment_all_summed.svg",  width=2, height=3)
-# p_states_all_summed
-# dev.off()
+data_long_states_wo_treatment$condition <- factor(data_long_states_wo_treatment$condition, levels=c("wt", "C3"))
+my_comparisons <- list( c("wt", "C3"))
 
 #ONLY RELEVANT
 data_long_states_wo_treatment <- data_long_states_wo_treatment[which(data_long_states_wo_treatment$movement == "all_to_stop" | 
@@ -73,12 +71,9 @@ data_long_states_wo_treatment <- data_long_states_wo_treatment[which(data_long_s
                                                                        data_long_states_wo_treatment$movement == "retr_to_stop_ant"| 
                                                                        data_long_states_wo_treatment$movement == "ant_to_stop_retr"| 
                                                                        data_long_states_wo_treatment$movement == "all_changes"),]
-#To order the conditions manually
-data_long_states_wo_treatment$condition <- factor(data_long_states_wo_treatment$condition, levels=c("Tau441", "Tau421"))
-#my_comparisons <- list( c("Tau441", "Tau421"))
-cbp <- c("#034e61", "#a00000")
+
 p_states_wo_all <- ggplot(data_long_states_wo_treatment,aes(x=condition,y=measurement))+
-  facet_wrap(~movement, ncol = 5) +
+  facet_wrap(~movement, ncol = 5, strip.position = "bottom") +
   geom_boxplot(width=0.5, aes(fill=condition), alpha=0.2) + #,draw_quantiles = c(0.25, 0.5, 0.75)
   geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
   scale_color_manual(values = cbp) +
@@ -89,50 +84,58 @@ p_states_wo_all <- ggplot(data_long_states_wo_treatment,aes(x=condition,y=measur
         axis.ticks = element_line(colour="black"),
         axis.text.x = element_text(color = "black", size = 10),
         axis.text.y = element_text(color = "black", size = 10),  
-        #axis.title.x = element_blank(), 
+        axis.title.x = element_blank(), 
         axis.title.y = element_blank()) +
   labs(fill = "Constructs and conditions") +
   ggtitle("Number of state changes relative to trajectory length") +
   scale_y_continuous(limits = c(0,0.7), breaks = seq(0,0.7,by = 0.05)) +
-  stat_compare_means(label = "p.signif", method = "t.test", comparisons = my_comparisons)
+  stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
 p_states_wo_all
-svg("state_changes_wo_treatment_all.svg",  width=7, height=3)
+svg("svg_plots_output/state_changes_wo_treatment_all.svg",  width=7, height=3)
 p_states_wo_all
 dev.off()
 
-#WITH TREATMENT
-data_long_states_with_treatment <- data_long_states[which(data_long_states$condition == "Tau441_001percentDMSO" | 
-                                                          data_long_states$condition == "Tau421_001percentDMSO" |
-                                                          data_long_states$condition == "Tau441_5nM_EpoD" |
-                                                          data_long_states$condition == "Tau421_5nM_EpoD"|
-                                                          data_long_states$condition == "Tau441_25nM_EpoD"|
-                                                          data_long_states$condition == "Tau421_25nM_EpoD"),]
+#ALL STATE CHANGES
+data_long_states_wo_treatment <- data_long_states_wo_treatment[which(data_long_states_wo_treatment$movement == "all_changes"),]
 
+p_states_wo_state_changes <- ggplot(data_long_states_wo_treatment,aes(x=condition,y=measurement))+
+  #facet_wrap(~movement, ncol = 5) +
+  geom_boxplot(width=0.5, aes(fill=condition), alpha=0.2) + #,draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(color = "black", size = 10),
+        axis.ticks = element_line(colour="black"),
+        axis.text.x = element_text(color = "black", size = 10),
+        axis.text.y = element_text(color = "black", size = 10),  
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank()) +
+  labs(fill = "Constructs and conditions") +
+  ggtitle("Number of state changes \nrelative to trajectory length") +
+  scale_y_continuous(limits = c(0,0.7), breaks = seq(0,0.7,by = 0.1)) +
+  stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
+p_states_wo_state_changes
+svg("svg_plots_output/state_changes_wo_treatment_state_changes.svg",  width=2, height=3)
+p_states_wo_state_changes
+dev.off()
+
+#WITH TREATMENT
+data_long_states_with_treatment <- data_long_states[which(data_long_states$treatment != "no_treat"),]
+#To order the conditions manually
+data_long_states_with_treatment$condition <- factor(data_long_states_with_treatment$condition, levels=c("wt", "C3"))
+data_long_states_with_treatment$treatment <- factor(data_long_states_with_treatment$treatment, levels=c("carrier", "EpoD", "EpoD_25nM"))
+my_comparisons <- list( c("wt", "C3"))
 #ONLY RELEVANT
 data_long_states_with_treatment <- data_long_states_with_treatment[which(data_long_states_with_treatment$movement == "all_to_stop" | 
                                                                            data_long_states_with_treatment$movement == "stop_to_all" | 
                                                                            data_long_states_with_treatment$movement == "retr_to_stop_ant"| 
                                                                            data_long_states_with_treatment$movement == "ant_to_stop_retr"| 
                                                                            data_long_states_with_treatment$movement == "all_changes"),]
-#To order the conditions manually
-data_long_states_with_treatment$condition <- factor(data_long_states_with_treatment$condition, levels=c("Tau441_001percentDMSO", "Tau421_001percentDMSO", "Tau441_5nM_EpoD", "Tau421_5nM_EpoD", "Tau441_25nM_EpoD", "Tau421_25nM_EpoD"))
-#plot histograms for collected filtered results
-my_comparisons <- list(
-  c("Tau441_001percentDMSO", "Tau421_001percentDMSO"), 
-  c("Tau441_001percentDMSO", "Tau441_5nM_EpoD"),
-  c("Tau441_001percentDMSO", "Tau441_25nM_EpoD"), 
-  c("Tau421_001percentDMSO", "Tau421_5nM_EpoD"),
-  c("Tau421_001percentDMSO", "Tau421_25nM_EpoD")#,
-  #c("Tau441_5nM_EpoD", "Tau421_5nM_EpoD"),
-  #c("Tau441_25nM_EpoD", "Tau421_25nM_EpoD"),
-)
-cbp <- c("#034e61", "#a00000",
-         "#034e61", "#a00000",
-         "#034e61", "#a00000")
-#converting data to between wide and long format
 
 p_states_with_all <- ggplot(data_long_states_with_treatment,aes(x=condition,y=measurement))+
-  facet_wrap(~movement, ncol = 5) +
+  facet_grid(movement~treatment, switch="x") +
   geom_boxplot(width=0.5, aes(fill=condition), alpha=0.2) + #,draw_quantiles = c(0.25, 0.5, 0.75)
   geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
   scale_color_manual(values = cbp) +
@@ -143,27 +146,65 @@ p_states_with_all <- ggplot(data_long_states_with_treatment,aes(x=condition,y=me
         axis.ticks = element_line(colour="black"),
         axis.text.x = element_text(color = "black", size = 10),
         axis.text.y = element_text(color = "black", size = 10),  
-        #axis.title.x = element_blank(), 
+        axis.title.x = element_blank(), 
         axis.title.y = element_blank()) +
   labs(fill = "Constructs and conditions") +
   ggtitle("Number of state changes relative to trajectory length") +
-  scale_y_continuous(limits = c(0,1), breaks = seq(0,0.7,by = 0.05)) +
-  stat_compare_means(label = "p.signif", method = "t.test", comparisons = my_comparisons)
+  scale_y_continuous(limits = c(0,0.75), breaks = seq(0,07,by = 0.1)) +
+  stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
 
 p_states_with_all
-svg("state_changes_with_treatment_all.svg",  width=10, height=3)
+svg("svg_plots_output/state_changes_with_treatment_all.svg",  width=5, height=9)
 p_states_with_all
 dev.off()
 
+#ALL STATE CHANGES
+data_long_states_with_treatment <- data_long_states_with_treatment[which(data_long_states_with_treatment$movement == "all_changes"),]
+
+p_states_with_state_changes <- ggplot(data_long_states_with_treatment,aes(x=condition,y=measurement))+
+  facet_grid(movement~treatment, switch="x") +
+  geom_boxplot(width=0.5, aes(fill=condition), alpha=0.2) + #,draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(color = "black", size = 10),
+        axis.ticks = element_line(colour="black"),
+        axis.text.x = element_text(color = "black", size = 10),
+        axis.text.y = element_text(color = "black", size = 10),  
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank()) +
+  labs(fill = "Constructs and conditions") +
+  ggtitle("Number of state changes \nrelative to trajectory length") +
+  scale_y_continuous(limits = c(0,0.7), breaks = seq(0,0.7,by = 0.1)) +
+  stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
+p_states_with_state_changes
+svg("svg_plots_output/state_changes_with_treatment_state_changes.svg",  width=6, height=3)
+p_states_with_state_changes
+dev.off()
+
+#Two-way ANOVA
+res.aov2 <- aov(measurement ~ condition + treatment, data = data_long_states_with_treatment)
+summary(res.aov2)
+# Two-way ANOVA with interaction effect
+# These two calls are equivalent
+res.aov3 <- aov(measurement ~ condition * treatment, data = data_long_states_with_treatment)
+summary(res.aov3)
+plot(res.aov3, 2)
+#https://www.datanovia.com/en/blog/how-to-add-p-values-to-ggplot-facets/
+  
+# Extract the residuals
+aov_residuals <- residuals(object = res.aov3)
+# Run Shapiro-Wilk test
+shapiro.test(x = aov_residuals )
+#DATA IS NOT NORMALLY DISTRIBUTED?! W = 0.97529, p-value = 0.01649
+#W = 0.97529, p-value = 0.01649
 
 
 
 
-
-
-
-
-#####TRAJECTORIES
+#####TRAJECTORIES STATE CHANGES
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 #read all files with selected name ending and extension
@@ -176,36 +217,50 @@ for (i in filenames){
   #print(head(x))
   data_merge_states_trajectories <- rbind(data_merge_states_trajectories, x)
 }
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 #data_merge_states$condition <- as.factor(data_merge_states$condition)
 
 # ALL STATE CHANGES
 data_long_states_trajectories <- gather(data_merge_states_trajectories, movement, measurement, RS:all_changes, factor_key=TRUE)
 
-#some zeroes are weird and can not be plotted
+#some zeroes were weird (0 and 0.000) and can not be plotted
 #data_long_states_trajectories$measurement <- as.numeric(data_long_states_trajectories$measurement)
 
+#######Rename conditions and add treatment column
+data_long_states_trajectories$treatment <- "treatment"
+
+data_long_states_trajectories$treatment[data_long_states_trajectories$condition == 'Tau441'] <- 'no_treat'
+data_long_states_trajectories$treatment[data_long_states_trajectories$condition == 'Tau421'] <- 'no_treat'
+data_long_states_trajectories$treatment[data_long_states_trajectories$condition == 'Tau441_001percentDMSO'] <- 'carrier'
+data_long_states_trajectories$treatment[data_long_states_trajectories$condition == 'Tau421_001percentDMSO'] <- 'carrier'
+data_long_states_trajectories$treatment[data_long_states_trajectories$condition == 'Tau441_5nM_EpoD'] <- 'EpoD'
+data_long_states_trajectories$treatment[data_long_states_trajectories$condition == 'Tau421_5nM_EpoD'] <- 'EpoD'
+data_long_states_trajectories$treatment[data_long_states_trajectories$condition == 'Tau441_25nM_EpoD'] <- 'EpoD_25nM'
+data_long_states_trajectories$treatment[data_long_states_trajectories$condition == 'Tau421_25nM_EpoD'] <- 'EpoD_25nM'
+
+data_long_states_trajectories$condition[data_long_states_trajectories$condition == 'Tau441'] <- 'wt'
+data_long_states_trajectories$condition[data_long_states_trajectories$condition == 'Tau421'] <- 'C3'
+data_long_states_trajectories$condition[data_long_states_trajectories$condition == 'Tau441_001percentDMSO'] <- 'wt'
+data_long_states_trajectories$condition[data_long_states_trajectories$condition == 'Tau421_001percentDMSO'] <- 'C3'
+data_long_states_trajectories$condition[data_long_states_trajectories$condition == 'Tau441_5nM_EpoD'] <- 'wt'
+data_long_states_trajectories$condition[data_long_states_trajectories$condition == 'Tau421_5nM_EpoD'] <- 'C3'
+data_long_states_trajectories$condition[data_long_states_trajectories$condition == 'Tau441_25nM_EpoD'] <- 'wt'
+data_long_states_trajectories$condition[data_long_states_trajectories$condition == 'Tau421_25nM_EpoD'] <- 'C3'
 
 #WITHOUT TREATMENT
-data_long_states_trajectories_wo_treatment <- data_long_states_trajectories[which(data_long_states_trajectories$condition == "Tau441" | data_long_states_trajectories$condition == "Tau421"),]
+data_long_states_trajectories_wo_treatment <- data_long_states_trajectories[which(data_long_states_trajectories$treatment == "no_treat"),]
 #To order the conditions manually
-data_long_states_trajectories_wo_treatment$condition <- factor(data_long_states_trajectories_wo_treatment$condition, levels=c("Tau441", "Tau421"))
-my_comparisons <- list( c("Tau441", "Tau421"))
-#cbp <- c("#3122D2", "#E83431")
-cbp <- c("#034e61", "#a00000")
+data_long_states_trajectories_wo_treatment$condition <- factor(data_long_states_trajectories_wo_treatment$condition, levels=c("wt", "C3"))
+my_comparisons <- list( c("wt", "C3"))
 
 data_long_states_trajectories_wo_treatment <- data_long_states_trajectories_wo_treatment[which(data_long_states_trajectories_wo_treatment$movement == "all_to_stop" | 
                                                                                                  data_long_states_trajectories_wo_treatment$movement == "stop_to_all" | 
                                                                                                  data_long_states_trajectories_wo_treatment$movement == "retr_to_stop_ant"| 
                                                                                                  data_long_states_trajectories_wo_treatment$movement == "ant_to_stop_retr"| 
                                                                                                  data_long_states_trajectories_wo_treatment$movement == "all_changes"),]
-#To order the conditions manually
-data_long_states_trajectories_wo_treatment$condition <- factor(data_long_states_trajectories_wo_treatment$condition, levels=c("Tau441", "Tau421"))
-#my_comparisons <- list( c("Tau441", "Tau421"))
-cbp <- c("#034e61", "#a00000")
-
 
 p_states_traj_wo_all <- ggplot(data_long_states_trajectories_wo_treatment,aes(x=condition,y=measurement))+
-  facet_wrap(~movement, ncol = 5) +
+  facet_wrap(~movement, ncol = 5, strip.position = "bottom") +
   geom_boxplot(width=0.5, aes(fill=condition), alpha=0.2) + #,draw_quantiles = c(0.25, 0.5, 0.75)
   geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
   scale_color_manual(values = cbp) +
@@ -216,25 +271,50 @@ p_states_traj_wo_all <- ggplot(data_long_states_trajectories_wo_treatment,aes(x=
         axis.ticks = element_line(colour="black"),
         axis.text.x = element_text(color = "black", size = 10),
         axis.text.y = element_text(color = "black", size = 10),  
-        #axis.title.x = element_blank(), 
+        axis.title.x = element_blank(), 
         axis.title.y = element_blank()) +
   labs(fill = "Constructs and conditions") +
-  ggtitle("Number of state changes relative to trajectory length") +
+  ggtitle("Number of state changes relative to trajectory length \ncheck big sample adjustments") +
+  scale_y_continuous(limits = c(-0.001,1.3), breaks = seq(0,1.2,by = 0.1)) +
+  stat_compare_means(aes(label = ..p.adjust..), method = "t.test",  p.adjust.method = "fdr", comparisons = my_comparisons) #label = "p.signif", #adjustment for multiple comparison, how to make it for big sample size?
+p_states_traj_wo_all
+svg("svg_plots_output/state_changes_trajectories_wo_treatment_all.svg",  width=7, height=3)
+p_states_traj_wo_all
+dev.off()
+
+#ALL STATE CHANGES
+data_long_states_trajectories_wo_treatment <- data_long_states_trajectories_wo_treatment[which(data_long_states_trajectories_wo_treatment$movement == "all_changes"),]
+
+p_states_wo_state_changes <- ggplot(data_long_states_trajectories_wo_treatment,aes(x=condition,y=measurement))+
+  #facet_wrap(~movement, ncol = 5) +
+  geom_boxplot(width=0.5, aes(fill=condition), alpha=0.2) + #,draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(color = "black", size = 10),
+        axis.ticks = element_line(colour="black"),
+        axis.text.x = element_text(color = "black", size = 10),
+        axis.text.y = element_text(color = "black", size = 10),  
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank()) +
+  labs(fill = "Constructs and conditions") +
+  ggtitle("Number of state changes \nrelative to trajectory length") +
   scale_y_continuous(limits = c(-0.001,1.25), breaks = seq(0,1.2,by = 0.1)) +
-  stat_compare_means(label = "p.signif", method = "t.test", comparisons = my_comparisons)
-p_states_traj_wo_all
-svg("state_changes_trajectories_wo_treatment_all.svg",  width=7, height=3)
-p_states_traj_wo_all
+  stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
+p_states_wo_state_changes
+svg("svg_plots_output/state_changes_trajectories_wo_treatment_state_changes.svg",  width=2, height=3)
+p_states_wo_state_changes
 dev.off()
 
 
 #WITH TREATMENT
-data_long_states_trajectories_with_treatment <- data_long_states_trajectories[which(data_long_states_trajectories$condition == "Tau441_001percentDMSO" | 
-                                                                         data_long_states_trajectories$condition == "Tau421_001percentDMSO" |
-                                                                         data_long_states_trajectories$condition == "Tau441_5nM_EpoD" |
-                                                                         data_long_states_trajectories$condition == "Tau421_5nM_EpoD"|
-                                                                         data_long_states_trajectories$condition == "Tau441_25nM_EpoD"|
-                                                                         data_long_states_trajectories$condition == "Tau421_25nM_EpoD"),]
+data_long_states_trajectories_with_treatment <- data_long_states_trajectories[which(data_long_states_trajectories$treatment != "no_treat"),]
+#To order the conditions manually
+data_long_states_trajectories_with_treatment$condition <- factor(data_long_states_trajectories_with_treatment$condition, levels=c("wt", "C3"))
+data_long_states_trajectories_with_treatment$treatment <- factor(data_long_states_trajectories_with_treatment$treatment, levels=c("carrier", "EpoD", "EpoD_25nM"))
+my_comparisons <- list( c("wt", "C3"))
 
 #ONLY RELEVANT
 data_long_states_trajectories_with_treatment <- data_long_states_trajectories_with_treatment[which(data_long_states_trajectories_with_treatment$movement == "all_to_stop" | 
@@ -242,25 +322,9 @@ data_long_states_trajectories_with_treatment <- data_long_states_trajectories_wi
                                                                                         data_long_states_trajectories_with_treatment$movement == "retr_to_stop_ant"| 
                                                                                         data_long_states_trajectories_with_treatment$movement == "ant_to_stop_retr"| 
                                                                                         data_long_states_trajectories_with_treatment$movement == "all_changes"),]
-#To order the conditions manually
-data_long_states_trajectories_with_treatment$condition <- factor(data_long_states_trajectories_with_treatment$condition, levels=c("Tau441_001percentDMSO", "Tau421_001percentDMSO", "Tau441_5nM_EpoD", "Tau421_5nM_EpoD", "Tau441_25nM_EpoD", "Tau421_25nM_EpoD"))
-#plot histograms for collected filtered results
-my_comparisons <- list(
-  c("Tau441_001percentDMSO", "Tau421_001percentDMSO"), 
-  c("Tau441_001percentDMSO", "Tau441_5nM_EpoD"),
-  c("Tau441_001percentDMSO", "Tau441_25nM_EpoD"), 
-  c("Tau421_001percentDMSO", "Tau421_5nM_EpoD"),
-  c("Tau421_001percentDMSO", "Tau421_25nM_EpoD")#,
-  #c("Tau441_5nM_EpoD", "Tau421_5nM_EpoD"),
-  #c("Tau441_25nM_EpoD", "Tau421_25nM_EpoD"),
-)
-cbp <- c("#034e61", "#a00000",
-         "#034e61", "#a00000",
-         "#034e61", "#a00000")
-#converting data to between wide and long format
 
 p_states_traj_with_all <- ggplot(data_long_states_trajectories_with_treatment,aes(x=condition,y=measurement))+
-  facet_wrap(~movement, ncol = 5) +
+  facet_grid(movement~treatment, switch="x") +
   geom_boxplot(width=0.5, aes(fill=condition), alpha=0.2) + #,draw_quantiles = c(0.25, 0.5, 0.75)
   geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
   scale_color_manual(values = cbp) +
@@ -271,19 +335,52 @@ p_states_traj_with_all <- ggplot(data_long_states_trajectories_with_treatment,ae
         axis.ticks = element_line(colour="black"),
         axis.text.x = element_text(color = "black", size = 10),
         axis.text.y = element_text(color = "black", size = 10),  
-        #axis.title.x = element_blank(), 
+        axis.title.x = element_blank(), 
         axis.title.y = element_blank()) +
   labs(fill = "Constructs and conditions") +
   ggtitle("Number of state changes relative to trajectory length") +
-  scale_y_continuous(limits = c(-0.001,2.3), breaks = seq(0,1.4,by = 0.1)) +
-  stat_compare_means(label = "p.signif", method = "t.test", comparisons = my_comparisons)
+  scale_y_continuous(limits = c(-0.001,1.6), breaks = seq(0,1.5,by = 0.2)) +
+  stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
 
 p_states_traj_with_all
-svg("state_changes_trajectories_with_treatment_all.svg",  width=10, height=3)
+svg("svg_plots_output/state_changes_trajectories_with_treatment_all.svg",  width=5, height=9)
 p_states_traj_with_all
 dev.off()
 
+#ALL STATE CHANGES
+data_long_states_trajectories_with_treatment <- data_long_states_trajectories_with_treatment[which(data_long_states_trajectories_with_treatment$movement == "all_changes"),]
 
+p_states_with_state_changes <- ggplot(data_long_states_trajectories_with_treatment,aes(x=condition,y=measurement))+
+  facet_wrap(~treatment, ncol = 3) +
+  geom_boxplot(width=0.5, aes(fill=condition), alpha=0.2) + #,draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(color = "black", size = 10),
+        axis.ticks = element_line(colour="black"),
+        axis.text.x = element_text(color = "black", size = 10),
+        axis.text.y = element_text(color = "black", size = 10),  
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank()) +
+  labs(fill = "Constructs and conditions") +
+  ggtitle("Number of state changes \nrelative to trajectory length") +
+  scale_y_continuous(limits = c(-0.001,1.6), breaks = seq(0,1.5,by = 0.2)) +
+  stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
+p_states_with_state_changes
+svg("svg_plots_output/state_changes_trajectories_with_treatment_state_changes.svg",  width=6, height=3)
+p_states_with_state_changes
+dev.off()
+
+#Two-way ANOVA
+res.aov2 <- aov(measurement ~ condition + treatment, data = data_long_states_trajectories_with_treatment)
+summary(res.aov2)
+# Two-way ANOVA with interaction effect
+# These two calls are equivalent
+res.aov3 <- aov(measurement ~ condition * treatment, data = data_long_states_trajectories_with_treatment)
+summary(res.aov3)
+plot(res.aov3, 2)
 
 
 
@@ -301,8 +398,9 @@ for (i in filenames){
   print(head(x))
   data_merge_fractions <- rbind(data_merge_fractions, x)
 }
-data_merge_fractions$condition <- as.factor(data_merge_fractions$condition)
-levels(data_merge_fractions$condition)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+#data_merge_fractions$condition <- as.factor(data_merge_fractions$condition) #do not set factor before renaming!
+
 
 data_merge_fractions$Moving <- data_merge_fractions$Anterograde + data_merge_fractions$Retrograde
 data_merge_fractions$Relative <- data_merge_fractions$Moving/(data_merge_fractions$Stationary+data_merge_fractions$Moving)
@@ -310,37 +408,57 @@ write.table(data_merge_fractions[,c("condition",   "Relative")], paste("cell_mea
 
 data_long_fractions <- gather(data_merge_fractions, fraction, measurement, Relative, factor_key=TRUE)
 
+#######Rename conditions and add treatment column
+data_long_fractions$treatment <- "treatment"
+
+data_long_fractions$treatment[data_long_fractions$condition == 'Tau441'] <- 'no_treat'
+data_long_fractions$treatment[data_long_fractions$condition == 'Tau421'] <- 'no_treat'
+data_long_fractions$treatment[data_long_fractions$condition == 'Tau441_001percentDMSO'] <- 'carrier'
+data_long_fractions$treatment[data_long_fractions$condition == 'Tau421_001percentDMSO'] <- 'carrier'
+data_long_fractions$treatment[data_long_fractions$condition == 'Tau441_5nM_EpoD'] <- 'EpoD'
+data_long_fractions$treatment[data_long_fractions$condition == 'Tau421_5nM_EpoD'] <- 'EpoD'
+data_long_fractions$treatment[data_long_fractions$condition == 'Tau441_25nM_EpoD'] <- 'EpoD_25nM'
+data_long_fractions$treatment[data_long_fractions$condition == 'Tau421_25nM_EpoD'] <- 'EpoD_25nM'
+
+data_long_fractions$condition[data_long_fractions$condition == 'Tau441'] <- 'wt'
+data_long_fractions$condition[data_long_fractions$condition == 'Tau421'] <- 'C3'
+data_long_fractions$condition[data_long_fractions$condition == 'Tau441_001percentDMSO'] <- 'wt'
+data_long_fractions$condition[data_long_fractions$condition == 'Tau421_001percentDMSO'] <- 'C3'
+data_long_fractions$condition[data_long_fractions$condition == 'Tau441_5nM_EpoD'] <- 'wt'
+data_long_fractions$condition[data_long_fractions$condition == 'Tau421_5nM_EpoD'] <- 'C3'
+data_long_fractions$condition[data_long_fractions$condition == 'Tau441_25nM_EpoD'] <- 'wt'
+data_long_fractions$condition[data_long_fractions$condition == 'Tau421_25nM_EpoD'] <- 'C3'
+
+
 #WITHOUT TREATMENT
-data_long_fractions_wo_treatment <- data_long_fractions[which(data_long_fractions$condition == "Tau441" | data_long_fractions$condition == "Tau421"),]
+data_long_fractions_wo_treatment <- data_long_fractions[which(data_long_fractions$treatment == "no_treat"),]
 #To order the conditions manually
-data_long_fractions_wo_treatment$condition <- factor(data_long_fractions_wo_treatment$condition, levels=c("Tau441", "Tau421"))
-my_comparisons <- list( c("Tau441", "Tau421"))
-cbp <- c("#034e61", "#a00000")
+data_long_fractions_wo_treatment$condition <- factor(data_long_fractions_wo_treatment$condition, levels=c("wt", "C3"))
+my_comparisons <- list(c("wt", "C3"))
 
-
-p_mov_wo <- ggdensity(data_long_fractions_wo_treatment, x = "measurement", 
-          fill = "condition", color = "condition",
-          add = "mean", rug = TRUE, alpha = .5) +
-  facet_grid(rows = vars(condition)) +
-  scale_color_manual(values = cbp) +
-  scale_fill_manual(values = cbp) +
-  #geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
-  theme_classic() +
-  theme(legend.position = "none",
-        plot.title = element_text(color = "black", size = 10),
-        axis.ticks = element_line(colour="black"),
-        axis.text.x = element_text(color = "black", size = 10),
-        axis.text.y = element_text(color = "black", size = 10),  
-        #axis.title.x = element_blank(), 
-        axis.title.y = element_blank()) +
-  ggtitle("Density of ratios of time spent \nmoving to all time with mean") +
-  scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.2)) +
-  scale_y_continuous(limits = c(-0.001,6.5), breaks = seq(0,6,by = 1)) #+
-  #stat_compare_means(label = "p.signif", method = "t.test", comparisons = my_comparisons)
-p_mov_wo
-svg("Density of ratios of time spent moving to all time with mean no treatment.svg",  width=3, height=2)
-p_mov_wo
-dev.off()
+# p_mov_wo <- ggdensity(data_long_fractions_wo_treatment, x = "measurement", 
+#           fill = "condition", color = "condition",
+#           add = "mean", rug = TRUE, alpha = .5) +
+#   facet_grid(rows = vars(condition)) +
+#   scale_color_manual(values = cbp) +
+#   scale_fill_manual(values = cbp) +
+#   #geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
+#   theme_classic() +
+#   theme(legend.position = "none",
+#         plot.title = element_text(color = "black", size = 10),
+#         axis.ticks = element_line(colour="black"),
+#         axis.text.x = element_text(color = "black", size = 10),
+#         axis.text.y = element_text(color = "black", size = 10),  
+#         #axis.title.x = element_blank(), 
+#         axis.title.y = element_blank()) +
+#   ggtitle("Density of ratios of time spent \nmoving to all time with mean") +
+#   scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.1)) +
+#   scale_y_continuous(limits = c(-0.001,6.5), breaks = seq(0,6,by = 1)) #+
+#   #stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
+# p_mov_wo
+# svg("svg_plots_output/Density of ratios of time spent moving to all time with mean no treatment.svg",  width=3, height=2)
+# p_mov_wo
+# dev.off()
 
 
 #https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
@@ -349,21 +467,23 @@ library(ggridges)
 p_mov_wo_median <- ggplot(data_long_fractions_wo_treatment, 
        aes(x = measurement, y = condition,
            color = condition)) + #fill = condition, 
+  stat_density_ridges(quantile_lines = TRUE, aes(fill = condition), alpha = .2,
+                      jittered_points = TRUE, scale = 0.65,
+                      point_shape = '|', point_size = 2, point_alpha = 0.5) + #position = "raincloud", 
   theme_classic() +
   theme(legend.position = "none",
         plot.title = element_text(color = "black", size = 10),
         axis.ticks = element_line(colour="black"),
         axis.text.x = element_text(color = "black", size = 10),
         axis.text.y = element_text(color = "black", size = 10),  
-        #axis.title.x = element_blank(), 
+        axis.title.x = element_blank(), 
         axis.title.y = element_blank()) +
   scale_color_manual(values = cbp) +
   scale_fill_manual(values = cbp) +
   ggtitle("Density of ratios of time spent \nmoving to all time \nwith median and quartiles") +
-  scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.2)) +
-  stat_density_ridges(quantile_lines = TRUE, aes(fill = condition), alpha = .2,jittered_points = TRUE, scale = 0.7) #position = "raincloud", 
+  scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.1))
 p_mov_wo_median
-svg("Density of ratios of time spent moving to all time with median no treatment.svg",  width=3, height=2)
+svg("svg_plots_output/density_ratios_moving_time_to_all_time_wo_treatment_median.svg",  width=3.5, height=2.5)
 p_mov_wo_median
 dev.off()
 
@@ -376,62 +496,47 @@ p_mov_overlap <- ggplot(data_long_fractions_wo_treatment, aes(x = measurement)) 
         axis.ticks = element_line(colour="black"),
         axis.text.x = element_text(color = "black", size = 10),
         axis.text.y = element_text(color = "black", size = 10),  
-        #axis.title.x = element_blank(), 
+        axis.title.x = element_blank(), 
         axis.title.y = element_blank()) +
   scale_color_manual(values = cbp) +
   scale_fill_manual(values = cbp) +
   ggtitle("Density of ratios of time spent \nmoving to all time") +
   scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.2))
 p_mov_overlap
-g("Density of ratios of time spent moving to all time overlap no treatment.svg",  width=3, height=2)
+svg("svg_plots_output/density_ratios_moving_time_to_all_time_wo_treatment_overlap.svg",  width=4, height=1.5)
 p_mov_overlap
 dev.off()
 
 #WITH TREATMENT
-data_long_fractions_with_treatment <- data_long_fractions[which(data_long_fractions$condition == "Tau441_001percentDMSO" | 
-                                                                            data_long_fractions$condition == "Tau421_001percentDMSO" |
-                                                                            data_long_fractions$condition == "Tau441_5nM_EpoD" |
-                                                                            data_long_fractions$condition == "Tau421_5nM_EpoD"|
-                                                                            data_long_fractions$condition == "Tau441_25nM_EpoD"|
-                                                                            data_long_fractions$condition == "Tau421_25nM_EpoD"),]
+data_long_fractions_with_treatment <- data_long_fractions[which(data_long_fractions$treatment != "no_treat"),]
 #To order the conditions manually
-data_long_fractions_with_treatment$condition <- factor(data_long_fractions_with_treatment$condition, levels=c("Tau441_001percentDMSO", "Tau421_001percentDMSO", "Tau441_5nM_EpoD", "Tau421_5nM_EpoD", "Tau441_25nM_EpoD", "Tau421_25nM_EpoD"))
-#plot histograms for collected filtered results
-my_comparisons <- list(
-  c("Tau441_001percentDMSO", "Tau421_001percentDMSO"), 
-  c("Tau441_001percentDMSO", "Tau441_5nM_EpoD"),
-  c("Tau441_001percentDMSO", "Tau441_25nM_EpoD"), 
-  c("Tau421_001percentDMSO", "Tau421_5nM_EpoD"),
-  c("Tau421_001percentDMSO", "Tau421_25nM_EpoD")#,
-  #c("Tau441_5nM_EpoD", "Tau421_5nM_EpoD"),
-  #c("Tau441_25nM_EpoD", "Tau421_25nM_EpoD"),
-)
-cbp <- c("#034e61", "#a00000",
-         "#034e61", "#a00000",
-         "#034e61", "#a00000")
-p_mov_with <- ggdensity(data_long_fractions_with_treatment, x = "measurement", 
-                      fill = "condition", color = "condition",
-                      add = "mean", rug = TRUE, alpha = .5) +
-  facet_grid(rows = vars(condition)) +
-  scale_color_manual(values = cbp) +
-  scale_fill_manual(values = cbp) +
-  #geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
-  theme_classic() +
-  theme(legend.position = "none",
-        plot.title = element_text(color = "black", size = 10),
-        axis.ticks = element_line(colour="black"),
-        axis.text.x = element_text(color = "black", size = 10),
-        axis.text.y = element_text(color = "black", size = 10),  
-        #axis.title.x = element_blank(), 
-        axis.title.y = element_blank()) +
-  ggtitle("Density of ratios of time spent \nmoving to all time with mean") +
-  scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.2)) +
-  scale_y_continuous(limits = c(-0.001,6.5), breaks = seq(0,6,by = 1)) #+
-#stat_compare_means(label = "p.signif", method = "t.test", comparisons = my_comparisons)
-p_mov_with
-svg("Density of ratios of time spent moving to all time with mean with treatment.svg",  width=3, height=2)
-p_mov_with
-dev.off()
+data_long_fractions_with_treatment$condition <- factor(data_long_fractions_with_treatment$condition, levels=c("wt", "C3"))
+data_long_fractions_with_treatment$treatment <- factor(data_long_fractions_with_treatment$treatment, levels=c("EpoD_25nM", "EpoD", "carrier"))
+my_comparisons <- list(c("wt", "C3"))
+
+# p_mov_with <- ggdensity(data_long_fractions_with_treatment, x = "measurement", 
+#                       fill = "condition", color = "condition",
+#                       add = "mean", rug = TRUE, alpha = .2) +
+#   facet_grid(rows = vars(condition,treatment)) +
+#   scale_color_manual(values = cbp) +
+#   scale_fill_manual(values = cbp) +
+#   #geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
+#   theme_classic() +
+#   theme(legend.position = "none",
+#         plot.title = element_text(color = "black", size = 10),
+#         axis.ticks = element_line(colour="black"),
+#         axis.text.x = element_text(color = "black", size = 10),
+#         axis.text.y = element_text(color = "black", size = 10),  
+#         #axis.title.x = element_blank(), 
+#         axis.title.y = element_blank()) +
+#   ggtitle("Density of ratios of time spent \nmoving to all time with mean") +
+#   scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.1)) +
+#   scale_y_continuous(limits = c(-0.001,6.5), breaks = seq(0,6,by = 1)) #+
+# #stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
+# p_mov_with
+# svg("svg_plots_output/Density of ratios of time spent moving to all time with mean with treatment.svg",  width=5, height=7)
+# p_mov_with
+# dev.off()
 
 
 #https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
@@ -439,35 +544,56 @@ library(ggridges)
 # Add quantiles Q1, Q2 (median) and Q3
 p_mov_with_median <- ggplot(data_long_fractions_with_treatment, 
                           aes(x = measurement, y = condition,
-                              color = condition)) + #fill = condition, 
+                              color = condition)) + #fill = condition,
+  facet_grid(rows = vars(treatment)) +
+  stat_density_ridges(quantile_lines = TRUE, aes(fill = condition), alpha = .2,
+                      jittered_points = TRUE, scale = 0.65,
+                      point_shape = '|', point_size = 2, point_alpha = 0.5) +
   theme_classic() +
   theme(legend.position = "none",
         plot.title = element_text(color = "black", size = 10),
         axis.ticks = element_line(colour="black"),
         axis.text.x = element_text(color = "black", size = 10),
         axis.text.y = element_text(color = "black", size = 10),  
-        #axis.title.x = element_blank(), 
+        axis.title.x = element_blank(), 
         axis.title.y = element_blank()) +
   scale_color_manual(values = cbp) +
   scale_fill_manual(values = cbp) +
   ggtitle("Density of ratios of time spent \nmoving to all time \nwith median and quartiles") +
-  scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.2)) +
-  stat_density_ridges(quantile_lines = TRUE, aes(fill = condition), alpha = .2,jittered_points = TRUE, scale = 0.7) #position = "raincloud", 
+  scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.1)) 
+
 p_mov_with_median
-svg("Density of ratios of time spent moving to all time with median with treatment.svg",  width=3, height=2)
+svg("svg_plots_output/density_ratios_moving_time_to_all_time_with_treatment_median.svg",  width=3.5, height=6)
 p_mov_with_median
 dev.off()
 
-
-
-
+p_mov_with_overlap <- ggplot(data_long_fractions_with_treatment, aes(x = measurement)) +
+  geom_density(aes(color = condition), alpha = 0.4) +
+  facet_grid(rows = vars(treatment)) +
+  #geom_histogram(aes(fill = condition), alpha = 0.4, bins=500)+
+  theme_classic() +
+  theme(#legend.position = "none",
+    plot.title = element_text(color = "black", size = 10),
+    axis.ticks = element_line(colour="black"),
+    axis.text.x = element_text(color = "black", size = 10),
+    axis.text.y = element_text(color = "black", size = 10),  
+    axis.title.x = element_blank(), 
+    axis.title.y = element_blank()) +
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  ggtitle("Density of ratios of time spent \nmoving to all time") +
+  scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.2))
+p_mov_with_overlap
+svg("svg_plots_output/density_ratios_moving_time_to_all_time_with_treatment_overlap.svg",  width=4, height=3)
+p_mov_with_overlap
+dev.off()
 
 
 ######## 1 additional
-cbp <- c("#3122D2", "#E83431",
-         "#574AE2", "#EF6F6C",
-         "#7D73E8", "#F28E8C",
-         "#A29BEF","#F6AFAE")
+# cbp <- c("#3122D2", "#E83431",
+#          "#574AE2", "#EF6F6C",
+#          "#7D73E8", "#F28E8C",
+#          "#A29BEF","#F6AFAE")
 # # ggplot(data_long_fractions, aes(x = measurement)) + 
 # #   geom_density(aes(color = condition), alpha = 0.4) +
 # #   #geom_histogram(aes(fill = condition), alpha = 0.4, bins=500)+
@@ -535,8 +661,7 @@ for (i in filenames){
   #print(head(x))
   data_merge_fractions_trajectories <- rbind(data_merge_fractions_trajectories, x)
 }
-data_merge_fractions_trajectories$condition <- as.factor(data_merge_fractions_trajectories$condition)
-
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 data_merge_fractions_trajectories$Moving <- data_merge_fractions_trajectories$Anterograde + data_merge_fractions_trajectories$Retrograde
 data_merge_fractions_trajectories$Relative <- data_merge_fractions_trajectories$Moving/(data_merge_fractions_trajectories$Stationary+data_merge_fractions_trajectories$Moving)
@@ -544,39 +669,56 @@ write.table(data_merge_fractions_trajectories[,c("condition",   "Relative")], pa
 
 data_long_fractions_trajectories <- gather(data_merge_fractions_trajectories, fraction, measurement, Relative, factor_key=TRUE)
 
+#######Rename conditions and add treatment column
+data_long_fractions_trajectories$treatment <- "treatment"
+
+data_long_fractions_trajectories$treatment[data_long_fractions_trajectories$condition == 'Tau441'] <- 'no_treat'
+data_long_fractions_trajectories$treatment[data_long_fractions_trajectories$condition == 'Tau421'] <- 'no_treat'
+data_long_fractions_trajectories$treatment[data_long_fractions_trajectories$condition == 'Tau441_001percentDMSO'] <- 'carrier'
+data_long_fractions_trajectories$treatment[data_long_fractions_trajectories$condition == 'Tau421_001percentDMSO'] <- 'carrier'
+data_long_fractions_trajectories$treatment[data_long_fractions_trajectories$condition == 'Tau441_5nM_EpoD'] <- 'EpoD'
+data_long_fractions_trajectories$treatment[data_long_fractions_trajectories$condition == 'Tau421_5nM_EpoD'] <- 'EpoD'
+data_long_fractions_trajectories$treatment[data_long_fractions_trajectories$condition == 'Tau441_25nM_EpoD'] <- 'EpoD_25nM'
+data_long_fractions_trajectories$treatment[data_long_fractions_trajectories$condition == 'Tau421_25nM_EpoD'] <- 'EpoD_25nM'
+
+data_long_fractions_trajectories$condition[data_long_fractions_trajectories$condition == 'Tau441'] <- 'wt'
+data_long_fractions_trajectories$condition[data_long_fractions_trajectories$condition == 'Tau421'] <- 'C3'
+data_long_fractions_trajectories$condition[data_long_fractions_trajectories$condition == 'Tau441_001percentDMSO'] <- 'wt'
+data_long_fractions_trajectories$condition[data_long_fractions_trajectories$condition == 'Tau421_001percentDMSO'] <- 'C3'
+data_long_fractions_trajectories$condition[data_long_fractions_trajectories$condition == 'Tau441_5nM_EpoD'] <- 'wt'
+data_long_fractions_trajectories$condition[data_long_fractions_trajectories$condition == 'Tau421_5nM_EpoD'] <- 'C3'
+data_long_fractions_trajectories$condition[data_long_fractions_trajectories$condition == 'Tau441_25nM_EpoD'] <- 'wt'
+data_long_fractions_trajectories$condition[data_long_fractions_trajectories$condition == 'Tau421_25nM_EpoD'] <- 'C3'
 
 #WITHOUT TREATMENT
-data_long_fractions_trajectories_wo_treatment <- data_long_fractions_trajectories[which(data_long_fractions_trajectories$condition == "Tau441" | data_long_fractions_trajectories$condition == "Tau421"),]
+data_long_fractions_trajectories_wo_treatment <- data_long_fractions_trajectories[which(data_long_fractions_trajectories$treatment == "no_treat"),]
 #To order the conditions manually
-data_long_fractions_trajectories_wo_treatment$condition <- factor(data_long_fractions_trajectories_wo_treatment$condition, levels=c("Tau441", "Tau421"))
-my_comparisons <- list( c("Tau441", "Tau421"))
-#cbp <- c("#3122D2", "#E83431")
-cbp <- c("#034e61", "#a00000")
-
-p_mov_traj_wo <- ggdensity(data_long_fractions_trajectories_wo_treatment, x = "measurement", 
-                      fill = "condition", color = "condition",
-                      add = "mean", rug = TRUE, alpha = .5) +
-  facet_grid(rows = vars(condition)) +
-  scale_color_manual(values = cbp) +
-  scale_fill_manual(values = cbp) +
-  #geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
-  theme_classic() +
-  theme(legend.position = "none",
-        plot.title = element_text(color = "black", size = 10),
-        axis.ticks = element_line(colour="black"),
-        axis.text.x = element_text(color = "black", size = 10),
-        axis.text.y = element_text(color = "black", size = 10),  
-        #axis.title.x = element_blank(), 
-        axis.title.y = element_blank()) +
-  ggtitle("Density of ratios of time spent \nmoving to all time with mean") +
-  scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.2)) +
-  scale_y_continuous(limits = c(-0.001,6.5), breaks = seq(0,6,by = 1)) #+
-#stat_compare_means(label = "p.signif", method = "t.test", comparisons = my_comparisons)
-p_mov_traj_wo
-svg("TRAJECTORIES Density of ratios of time spent moving to all time with mean no treatment.svg",  width=3, height=2)
-p_mov_traj_wo
-dev.off()
-
+data_long_fractions_trajectories_wo_treatment$condition <- factor(data_long_fractions_trajectories_wo_treatment$condition, levels=c("wt", "C3"))
+my_comparisons <- list(c("wt", "C3"))
+#plot
+# p_mov_traj_wo <- ggdensity(data_long_fractions_trajectories_wo_treatment, x = "measurement", 
+#                       fill = "condition", color = "condition",
+#                       add = "mean", rug = TRUE, alpha = .5) +
+#   facet_grid(rows = vars(condition)) +
+#   scale_color_manual(values = cbp) +
+#   scale_fill_manual(values = cbp) +
+#   #geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
+#   theme_classic() +
+#   theme(legend.position = "none",
+#         plot.title = element_text(color = "black", size = 10),
+#         axis.ticks = element_line(colour="black"),
+#         axis.text.x = element_text(color = "black", size = 10),
+#         axis.text.y = element_text(color = "black", size = 10),  
+#         #axis.title.x = element_blank(), 
+#         axis.title.y = element_blank()) +
+#   ggtitle("Density of ratios of time spent \nmoving to all time with mean") +
+#   scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.2)) +
+#   scale_y_continuous(limits = c(-0.001,6.5), breaks = seq(0,6,by = 1)) #+
+# #stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
+# p_mov_traj_wo
+# svg("svg_plots_output/density_ratios_trajectories_moving_time_to_all_time_wo_treatment_mean.svg",  width=3.5, height=2.5)
+# p_mov_traj_wo
+# dev.off()
 
 #https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
 library(ggridges)
@@ -590,7 +732,7 @@ p_mov_traj_wo_median <- ggplot(data_long_fractions_trajectories_wo_treatment,
         axis.ticks = element_line(colour="black"),
         axis.text.x = element_text(color = "black", size = 10),
         axis.text.y = element_text(color = "black", size = 10),  
-        #axis.title.x = element_blank(), 
+        axis.title.x = element_blank(), 
         axis.title.y = element_blank()) +
   scale_color_manual(values = cbp) +
   scale_fill_manual(values = cbp) +
@@ -598,7 +740,7 @@ p_mov_traj_wo_median <- ggplot(data_long_fractions_trajectories_wo_treatment,
   scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.2)) +
   stat_density_ridges(quantile_lines = TRUE, aes(fill = condition), alpha = .2,jittered_points = TRUE, scale = 0.7) #position = "raincloud", 
 p_mov_traj_wo_median
-svg("TRAJECTORIES Density of ratios of time spent moving to all time with median no treatment.svg",  width=3, height=2)
+svg("svg_plots_output/density_ratios_trajectories_moving_time_to_all_time_wo_treatment_median.svg",  width=3.5, height=2.5)
 p_mov_traj_wo_median
 dev.off()
 
@@ -611,63 +753,48 @@ p_mov_traj_overlap <- ggplot(data_long_fractions_trajectories_wo_treatment, aes(
     axis.ticks = element_line(colour="black"),
     axis.text.x = element_text(color = "black", size = 10),
     axis.text.y = element_text(color = "black", size = 10),  
-    #axis.title.x = element_blank(), 
+    axis.title.x = element_blank(), 
     axis.title.y = element_blank()) +
   scale_color_manual(values = cbp) +
   scale_fill_manual(values = cbp) +
   ggtitle("Density of ratios of time spent \nmoving to all time") +
   scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.2))
 p_mov_traj_overlap
-svg("TRAJECTORIES Density of ratios of time spent moving to all time overlap no treatment.svg",  width=3, height=2)
+svg("svg_plots_output/density_ratios_trajectories_moving_time_to_all_time_wo_treatment_overlap.svg",  width=4, height=1.5)
 p_mov_traj_overlap
 dev.off()
 
 
 #WITH TREATMENT
-data_long_fractions_trajectories_with_treatment <- data_long_fractions_trajectories[which(data_long_fractions_trajectories$condition == "Tau441_001percentDMSO" | 
-                                                                                          data_long_fractions_trajectories$condition == "Tau421_001percentDMSO" |
-                                                                                          data_long_fractions_trajectories$condition == "Tau441_5nM_EpoD" |
-                                                                                          data_long_fractions_trajectories$condition == "Tau421_5nM_EpoD"|
-                                                                                          data_long_fractions_trajectories$condition == "Tau441_25nM_EpoD"|
-                                                                                          data_long_fractions_trajectories$condition == "Tau421_25nM_EpoD"),]
+data_long_fractions_trajectories_with_treatment <- data_long_fractions_trajectories[which(data_long_fractions_trajectories$treatment != "no_treat"),]
 #To order the conditions manually
-data_long_fractions_trajectories_with_treatment$condition <- factor(data_long_fractions_trajectories_with_treatment$condition, levels=c("Tau441_001percentDMSO", "Tau421_001percentDMSO", "Tau441_5nM_EpoD", "Tau421_5nM_EpoD", "Tau441_25nM_EpoD", "Tau421_25nM_EpoD"))
-#plot histograms for collected filtered results
-my_comparisons <- list(
-  c("Tau441_001percentDMSO", "Tau421_001percentDMSO"), 
-  c("Tau441_001percentDMSO", "Tau441_5nM_EpoD"),
-  c("Tau441_001percentDMSO", "Tau441_25nM_EpoD"), 
-  c("Tau421_001percentDMSO", "Tau421_5nM_EpoD"),
-  c("Tau421_001percentDMSO", "Tau421_25nM_EpoD")#,
-  #c("Tau441_5nM_EpoD", "Tau421_5nM_EpoD"),
-  #c("Tau441_25nM_EpoD", "Tau421_25nM_EpoD"),
-)
-cbp <- c("#034e61", "#a00000",
-         "#034e61", "#a00000",
-         "#034e61", "#a00000")
-p_mov_traj_with <- ggdensity(data_long_fractions_trajectories_with_treatment, x = "measurement", 
-                        fill = "condition", color = "condition",
-                        add = "mean", rug = TRUE, alpha = .5) +
-  facet_grid(rows = vars(condition)) +
-  scale_color_manual(values = cbp) +
-  scale_fill_manual(values = cbp) +
-  #geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
-  theme_classic() +
-  theme(legend.position = "none",
-        plot.title = element_text(color = "black", size = 10),
-        axis.ticks = element_line(colour="black"),
-        axis.text.x = element_text(color = "black", size = 10),
-        axis.text.y = element_text(color = "black", size = 10),  
-        #axis.title.x = element_blank(), 
-        axis.title.y = element_blank()) +
-  ggtitle("Density of ratios of time spent \nmoving to all time with mean") +
-  scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.2)) +
-  scale_y_continuous(limits = c(-0.001,6.5), breaks = seq(0,6,by = 1)) #+
-#stat_compare_means(label = "p.signif", method = "t.test", comparisons = my_comparisons)
-p_mov_traj_with
-svg("TRAJECTORIES Density of ratios of time spent moving to all time with mean with treatment.svg",  width=3, height=2)
-p_mov_traj_with
-dev.off()
+data_long_fractions_trajectories_with_treatment$condition <- factor(data_long_fractions_trajectories_with_treatment$condition, levels=c("wt", "C3"))
+data_long_fractions_trajectories_with_treatment$treatment <- factor(data_long_fractions_trajectories_with_treatment$treatment, levels=c("EpoD_25nM", "EpoD", "carrier"))
+my_comparisons <- list(c("wt", "C3"))
+
+# p_mov_traj_with <- ggdensity(data_long_fractions_trajectories_with_treatment, x = "measurement", 
+#                         fill = "condition", color = "condition",
+#                         add = "mean", rug = TRUE, alpha = .5) +
+#   facet_grid(rows = vars(condition)) +
+#   scale_color_manual(values = cbp) +
+#   scale_fill_manual(values = cbp) +
+#   #geom_jitter(width = 0.2, size = 0.5, aes(color=condition)) + #position = position_jitterdodge(seed = 1, dodge.width = 0.9)
+#   theme_classic() +
+#   theme(legend.position = "none",
+#         plot.title = element_text(color = "black", size = 10),
+#         axis.ticks = element_line(colour="black"),
+#         axis.text.x = element_text(color = "black", size = 10),
+#         axis.text.y = element_text(color = "black", size = 10),  
+#         #axis.title.x = element_blank(), 
+#         axis.title.y = element_blank()) +
+#   ggtitle("Density of ratios of time spent \nmoving to all time with mean") +
+#   scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.2)) +
+#   scale_y_continuous(limits = c(-0.001,6.5), breaks = seq(0,6,by = 1)) #+
+# #stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
+# p_mov_traj_with
+# svg("svg_plots_output/TRAJECTORIES Density of ratios of time spent moving to all time with mean with treatment.svg",  width=5, height=4)
+# p_mov_traj_with
+# dev.off()
 
 
 #https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
@@ -675,25 +802,49 @@ library(ggridges)
 # Add quantiles Q1, Q2 (median) and Q3
 p_mov_traj_with_median <- ggplot(data_long_fractions_trajectories_with_treatment, 
                             aes(x = measurement, y = condition,
-                                color = condition)) + #fill = condition, 
+                                color = condition)) + #fill = condition,
+  facet_grid(rows = vars(treatment)) +
+  stat_density_ridges(quantile_lines = TRUE, aes(fill = condition), alpha = .2,
+                      jittered_points = TRUE, scale = 0.65,
+                      point_shape = '|', point_size = 2, point_alpha = 0.5) +
   theme_classic() +
   theme(legend.position = "none",
         plot.title = element_text(color = "black", size = 10),
         axis.ticks = element_line(colour="black"),
         axis.text.x = element_text(color = "black", size = 10),
         axis.text.y = element_text(color = "black", size = 10),  
-        #axis.title.x = element_blank(), 
+        axis.title.x = element_blank(), 
         axis.title.y = element_blank()) +
   scale_color_manual(values = cbp) +
   scale_fill_manual(values = cbp) +
   ggtitle("Density of ratios of time spent \nmoving to all time \nwith median and quartiles") +
-  scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.2)) +
-  stat_density_ridges(quantile_lines = TRUE, aes(fill = condition), alpha = .2,jittered_points = TRUE, scale = 0.7) #position = "raincloud", 
+  scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.1)) 
+
 p_mov_traj_with_median
-svg("TRAJECTORIES Density of ratios of time spent moving to all time with median with treatment.svg",  width=3, height=2)
+svg("svg_plots_output/density_ratios_trajectories_moving_time_to_all_time_with_treatment_median.svg",  width=3.5, height=6)
 p_mov_traj_with_median
 dev.off()
 
+p_mov_traj_with_overlap <- ggplot(data_long_fractions_trajectories_with_treatment, aes(x = measurement)) +
+  geom_density(aes(color = condition), alpha = 0.4) +
+  facet_grid(rows = vars(treatment)) +
+  #geom_histogram(aes(fill = condition), alpha = 0.4, bins=500)+
+  theme_classic() +
+  theme(#legend.position = "none",
+    plot.title = element_text(color = "black", size = 10),
+    axis.ticks = element_line(colour="black"),
+    axis.text.x = element_text(color = "black", size = 10),
+    axis.text.y = element_text(color = "black", size = 10),  
+    axis.title.x = element_blank(), 
+    axis.title.y = element_blank()) +
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  ggtitle("Density of ratios of time spent \nmoving to all time") +
+  scale_x_continuous(limits = c(-0.001,1), breaks = seq(0,1,by = 0.2))
+p_mov_traj_with_overlap
+svg("svg_plots_output/density_ratios_trajectories_moving_time_to_all_time_with_treatment_overlap.svg",  width=4, height=3)
+p_mov_traj_with_overlap
+dev.off()
 
 
 
@@ -894,3 +1045,311 @@ dev.off()
 #   scale_y_continuous(breaks = pretty(data_long_velocities_with_treatment$measurement, n = 10)) +
 #   stat_compare_means(label = "p.signif", method = "t.test", ref.group = "Tau441_001percentDMSO")
 # dev.off()
+
+
+
+### VELOCITIES
+
+#Set working directory
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+#read all files with selected name ending and extension
+filenames <- Sys.glob(file.path("Tau*/*_velocities_final.csv"))
+#make data frame to collect data into through the loop
+data_merge_velocities <- data.frame()
+#loop through all files
+for (i in filenames){  
+  x <- read.table(i, sep = ";",header = TRUE)
+  print(head(x))
+  data_merge_velocities <- rbind(data_merge_velocities, x)
+}
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+#velocity to positive value
+data_merge_velocities$Mean_retrograde <- -data_merge_velocities$Mean_retrograde 
+data_merge_velocities$Min_retrograde <- -data_merge_velocities$Min_retrograde 
+#head(data_merge_velocities)
+
+#converting data to between wide and long format
+data_long_velocities <- gather(data_merge_velocities, movement, measurement, Mean_retrograde:Max_anterograde, factor_key=TRUE)
+
+#######Rename conditions and add treatment column
+data_long_velocities$treatment <- "treatment"
+
+data_long_velocities$treatment[data_long_velocities$condition == 'Tau441'] <- 'no_treat'
+data_long_velocities$treatment[data_long_velocities$condition == 'Tau421'] <- 'no_treat'
+data_long_velocities$treatment[data_long_velocities$condition == 'Tau441_001percentDMSO'] <- 'carrier'
+data_long_velocities$treatment[data_long_velocities$condition == 'Tau421_001percentDMSO'] <- 'carrier'
+data_long_velocities$treatment[data_long_velocities$condition == 'Tau441_5nM_EpoD'] <- 'EpoD'
+data_long_velocities$treatment[data_long_velocities$condition == 'Tau421_5nM_EpoD'] <- 'EpoD'
+data_long_velocities$treatment[data_long_velocities$condition == 'Tau441_25nM_EpoD'] <- 'EpoD_25nM'
+data_long_velocities$treatment[data_long_velocities$condition == 'Tau421_25nM_EpoD'] <- 'EpoD_25nM'
+
+data_long_velocities$condition[data_long_velocities$condition == 'Tau441'] <- 'wt'
+data_long_velocities$condition[data_long_velocities$condition == 'Tau421'] <- 'C3'
+data_long_velocities$condition[data_long_velocities$condition == 'Tau441_001percentDMSO'] <- 'wt'
+data_long_velocities$condition[data_long_velocities$condition == 'Tau421_001percentDMSO'] <- 'C3'
+data_long_velocities$condition[data_long_velocities$condition == 'Tau441_5nM_EpoD'] <- 'wt'
+data_long_velocities$condition[data_long_velocities$condition == 'Tau421_5nM_EpoD'] <- 'C3'
+data_long_velocities$condition[data_long_velocities$condition == 'Tau441_25nM_EpoD'] <- 'wt'
+data_long_velocities$condition[data_long_velocities$condition == 'Tau421_25nM_EpoD'] <- 'C3'
+
+#WITHOUT TREATMENT
+data_long_velocities_wo_treatment <- data_long_velocities[which(data_long_velocities$treatment == "no_treat"),]
+#To order the conditions manually
+data_long_velocities_wo_treatment$condition <- factor(data_long_velocities_wo_treatment$condition, levels=c("wt", "C3"))
+my_comparisons <- list(c("wt", "C3"))
+
+#additional functions for further plotting
+meanFunction <- function(x){
+  return(data.frame(y=round(mean(x),2),label=round(mean(x,na.rm=T),2)))}
+medianFunction <- function(x){
+  return(data.frame(y=round(median(x),2),label=round(median(x,na.rm=T),2)))}
+
+#PLOT ALL FACETTED
+p_vel <- ggplot(data_long_velocities_wo_treatment,aes(x=condition,y=measurement))+
+  facet_wrap(~movement, ncol = 4) +
+  #geom_violin(width=1, aes(color=condition, fill=condition), alpha = 0.2, trim = FALSE) + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_violin(aes(color=condition, fill=condition), alpha = 0.2) + #width=0.5, 
+  #geom_point(aes(color=condition), position = position_jitterdodge(), size = 0.7) + 
+  geom_jitter(aes(color=condition), size = 0.7, width = 0.2) +
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(color = "black", size = 10),
+        axis.ticks = element_line(colour="black"),
+        axis.text.x = element_text(color = "black", size = 10),
+        axis.text.y = element_text(color = "black", size = 10),  
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank()) +
+  #stat_summary(fun.data = meanFunction, geom ="text", color = "black", size = 3, vjust = 0) +
+  ggtitle("Velocity (d(smoothed_disp)/d(time))") +
+  stat_summary(fun = mean, geom = "point",colour = "black", size=1) +
+  scale_y_continuous(limits = c(0,0.45), breaks = seq(0,0.45,by = 0.05)) + #pretty(data_long_velocities_wo_treatment$measurement, n = 10)
+  stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif",  #+
+#stat_compare_means(label = "p.signif", method = "t.test", ref.group = "Tau441")
+p_vel
+svg("svg_plots_output/data_long_velocities_wo_treatment_all_facetted.svg",  width=7, height=3)
+p_vel
+dev.off()
+
+#PLOT MEAN PER CELL
+data_long_velocities_wo_treatment_mean <- data_long_velocities_wo_treatment[which(data_long_velocities_wo_treatment$movement == "Mean_retrograde" | data_long_velocities_wo_treatment$movement == "Mean_anterograde"),]
+p_vel_mean <- ggplot(data_long_velocities_wo_treatment_mean,aes(x=condition,y=measurement))+
+  #facet_wrap(~movement, ncol = 4) +
+  #geom_violin(width=1, aes(color=condition, fill=condition), alpha = 0.2, trim = FALSE) + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_violin(aes(color=condition, fill=condition), alpha = 0.2) + #width=0.5, 
+  #geom_point(aes(color=condition), position = position_jitterdodge(), size = 0.7) + 
+  geom_jitter(aes(color=condition), size = 0.7, width = 0.2) +
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(color = "black", size = 10),
+        axis.ticks = element_line(colour="black"),
+        axis.text.x = element_text(color = "black", size = 10),
+        axis.text.y = element_text(color = "black", size = 10),  
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank()) +
+  #stat_summary(fun.data = meanFunction, geom ="text", color = "black", size = 3, vjust = 0) +
+  ggtitle("Mean velocity (d(smoothed_disp)/d(time)), \nA&R combined") +
+  stat_summary(fun = mean, geom = "point",colour = "black", size=1) +
+  scale_y_continuous(limits = c(0,0.25), breaks = seq(0,0.20,by = 0.05)) + #pretty(data_long_velocities_wo_treatment$measurement, n = 10)
+  stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
+p_vel_mean
+svg("svg_plots_output/data_long_velocities_wo_treatment_mean.svg",  width=2, height=3)
+p_vel_mean
+dev.off()
+
+#PLOT MAX PER CELL
+data_long_velocities_wo_treatment_max <- data_long_velocities_wo_treatment[which(data_long_velocities_wo_treatment$movement == "Min_retrograde" | data_long_velocities_wo_treatment$movement == "Max_anterograde"),]
+p_vel_max <- ggplot(data_long_velocities_wo_treatment_max,aes(x=condition,y=measurement))+
+  #facet_wrap(~movement, ncol = 4) +
+  #geom_violin(width=1, aes(color=condition, fill=condition), alpha = 0.2, trim = FALSE) + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_violin(aes(color=condition, fill=condition), alpha = 0.2) + #width=0.5, 
+  #geom_point(aes(color=condition), position = position_jitterdodge(), size = 0.7) + #, position = position_jitterdodge()
+  geom_jitter(aes(color=condition), size = 0.7, width = 0.2) +
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(color = "black", size = 10),
+        axis.ticks = element_line(colour="black"),
+        axis.text.x = element_text(color = "black", size = 10),
+        axis.text.y = element_text(color = "black", size = 10),  
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank()) +
+  #stat_summary(fun.data = meanFunction, geom ="text", color = "black", size = 3, vjust = 0) +
+  ggtitle("Max velocity (d(smoothed_disp)/d(time)), \nA&R combined") +
+  stat_summary(fun = mean, geom = "point",colour = "black", size=1) +
+  scale_y_continuous(limits = c(0,0.45), breaks = seq(0,0.45,by = 0.05)) + #pretty(data_long_velocities_wo_treatment$measurement, n = 10)
+  stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
+p_vel_max
+svg("svg_plots_output/data_long_velocities_wo_treatment_max.svg",  width=2, height=3)
+p_vel_max
+dev.off()
+
+
+# ggarrange(p_vel_mean, p_vel_max, p_vel, ncol = 2, nrow = 2, 
+#           widths = c(4,2), 
+#           heights = c(4,2),
+#           common.legend = TRUE,
+#           labels = c('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'))
+
+
+arrange_wo <- ggarrange(p_vel, # First row
+                        ggarrange(p_vel_mean, p_vel_max, ncol = 2, widths = c(0.5,0.5), labels = c("B", "C")), # Second row with box and dot plots
+                        nrow = 2, 
+                        common.legend = TRUE,
+                        #heights = c(4,2),
+                        labels = "A" # Labels of the first plot
+) 
+arrange_wo
+svg("svg_plots_output/data_long_velocities_wo_treatment_arrange_all.svg",  width=7, height=6)
+arrange_wo
+dev.off()
+
+
+##### WITH TREATMENT #####
+#WITHOUT TREATMENT
+data_long_velocities_with_treatment <- data_long_velocities[which(data_long_velocities$treatment != "no_treat"),]
+#To order the conditions manually
+data_long_velocities_with_treatment$condition <- factor(data_long_velocities_with_treatment$condition, levels=c("wt", "C3"))
+data_long_velocities_with_treatment$treatment <- factor(data_long_velocities_with_treatment$treatment, levels=c("EpoD_25nM", "EpoD", "carrier"))
+my_comparisons <- list(c("wt", "C3"))
+
+
+#why did na and inf arise? had to get rid of them first
+data_long_velocities_with_treatment <- data_long_velocities_with_treatment[!is.infinite(data_long_velocities_with_treatment$measurement),]
+data_long_velocities_with_treatment <- data_long_velocities_with_treatment[!is.na(data_long_velocities_with_treatment$measurement),]
+#colMax <- function(data) sapply(data, max, na.rm = TRUE)
+#colMax(data_long_velocities_with_treatment$measurement) #does not work
+
+
+#PLOT ALL FACETTED
+
+p_vel_treat <- ggplot(data_long_velocities_with_treatment,aes(x=condition,y=measurement))+
+  facet_grid(treatment~movement) +
+  #geom_violin(width=1, aes(color=condition, fill=condition), alpha = 0.2, trim = FALSE) + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_violin(aes(color=condition, fill=condition), alpha = 0.2) + #width=0.5, 
+  #geom_point(aes(color=condition), position = position_jitterdodge(), size = 0.7) + 
+  geom_jitter(aes(color=condition), size = 0.7, width = 0.2) +
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(color = "black", size = 10),
+        axis.ticks = element_line(colour="black"),
+        axis.text.x = element_text(color = "black", size = 10),
+        axis.text.y = element_text(color = "black", size = 10),  
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank()) +
+  #stat_summary(fun.data = meanFunction, geom ="text", color = "black", size = 3, vjust = 0) +
+  ggtitle("Velocity (d(smoothed_disp)/d(time))") +
+  stat_summary(fun = mean, geom = "point",colour = "black", size=1) +
+  scale_y_continuous(limits = c(0,0.42), breaks = seq(0,0.4,by = 0.05)) + #pretty(data_long_velocities_wo_treatment$measurement, n = 10)
+  stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif",  #+
+#stat_compare_means(label = "p.signif", method = "t.test", ref.group = "Tau441")
+p_vel_treat
+svg("svg_plots_output/data_long_velocities_with_treatment_all_facetted.svg",  width=6, height=6)
+p_vel_treat
+dev.off()
+
+
+#PLOT MEAN PER CELL
+data_long_velocities_with_treatment_mean <- data_long_velocities_with_treatment[which(data_long_velocities_with_treatment$movement == "Mean_retrograde" | data_long_velocities_with_treatment$movement == "Mean_anterograde"),]
+data_long_velocities_with_treatment_mean$treatment <- factor(data_long_velocities_with_treatment_mean$treatment, levels=c("carrier", "EpoD", "EpoD_25nM"))
+p_vel_treat_mean <- ggplot(data_long_velocities_with_treatment_mean,aes(x=condition,y=measurement))+
+  facet_grid(~treatment) +
+  #geom_violin(width=1, aes(color=condition, fill=condition), alpha = 0.2, trim = FALSE) + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_violin(aes(color=condition, fill=condition), alpha = 0.2) + #width=0.5, 
+  #geom_point(aes(color=condition), position = position_jitterdodge(), size = 0.7) + 
+  geom_jitter(aes(color=condition), size = 0.7, width = 0.2) +
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(color = "black", size = 10),
+        axis.ticks = element_line(colour="black"),
+        axis.text.x = element_text(color = "black", size = 10),
+        axis.text.y = element_text(color = "black", size = 10),  
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank()) +
+  #stat_summary(fun.data = meanFunction, geom ="text", color = "black", size = 3, vjust = 0) +
+  ggtitle("Mean velocity (d(smoothed_disp)/d(time)), \nA&R combined") +
+  stat_summary(fun = mean, geom = "point",colour = "black", size=1) +
+  scale_y_continuous(limits = c(0,0.42), breaks = seq(0,0.4,by = 0.05)) + #pretty(data_long_velocities_wo_treatment$measurement, n = 10)
+  stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
+p_vel_treat_mean
+svg("svg_plots_output/data_long_velocities_with_treatment_mean.svg",  width=5, height=3)
+p_vel_treat_mean
+dev.off()
+
+#PLOT MAX PER CELL
+data_long_velocities_with_treatment_max <- data_long_velocities_with_treatment[which(data_long_velocities_with_treatment$movement == "Min_retrograde" | data_long_velocities_with_treatment$movement == "Max_anterograde"),]
+data_long_velocities_with_treatment_max$treatment <- factor(data_long_velocities_with_treatment_max$treatment, levels=c("carrier", "EpoD", "EpoD_25nM"))
+p_vel_treat_max <- ggplot(data_long_velocities_with_treatment_max,aes(x=condition,y=measurement))+
+  facet_grid(~treatment) +
+  #geom_violin(width=1, aes(color=condition, fill=condition), alpha = 0.2, trim = FALSE) + #trim=FALSE, draw_quantiles = c(0.25, 0.5, 0.75)
+  geom_violin(aes(color=condition, fill=condition), alpha = 0.2) + #width=0.5, 
+  #geom_point(aes(color=condition), position = position_jitterdodge(), size = 0.7) + #, position = position_jitterdodge()
+  geom_jitter(aes(color=condition), size = 0.7, width = 0.2) +
+  scale_color_manual(values = cbp) +
+  scale_fill_manual(values = cbp) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(color = "black", size = 10),
+        axis.ticks = element_line(colour="black"),
+        axis.text.x = element_text(color = "black", size = 10),
+        axis.text.y = element_text(color = "black", size = 10),  
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank()) +
+  #stat_summary(fun.data = meanFunction, geom ="text", color = "black", size = 3, vjust = 0) +
+  ggtitle("Max velocity (d(smoothed_disp)/d(time)), \nA&R combined") +
+  stat_summary(fun = mean, geom = "point",colour = "black", size=1) +
+  scale_y_continuous(limits = c(0,0.42), breaks = seq(0,0.4,by = 0.05)) + #pretty(data_long_velocities_wo_treatment$measurement, n = 10)
+  stat_compare_means(method = "t.test", comparisons = my_comparisons, size = 3) #label = "p.signif", 
+p_vel_treat_max
+svg("svg_plots_output/data_long_velocities_with_treatment_max.svg",  width=5, height=3)
+p_vel_treat_max
+dev.off()
+
+
+# ggarrange(p_vel_treat_mean, p_vel_treat_max, p_vel_treat, ncol = 2, nrow = 2, 
+#           widths = c(4,2), 
+#           heights = c(4,2),
+#           common.legend = TRUE,
+#           labels = c('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'))
+
+
+arrange_with <- ggarrange(p_vel_treat, # First row
+                          ggarrange(p_vel_treat_mean, p_vel_treat_max, ncol = 2, widths = c(0.5,0.5), labels = c("B", "C")), # Second row with box and dot plots
+                          nrow = 2, 
+                          common.legend = TRUE,
+                          heights = c(4,2),
+                          labels = "A" # Labels of the first plot
+) 
+arrange_with
+svg("svg_plots_output/data_long_velocities_with_treatment_arrange_all.svg",  width=6, height=8)
+arrange_with
+dev.off()
+
+
+arrange_all <- ggarrange(p_vel, # First row
+                         ggarrange(p_vel_mean, p_vel_max, ncol = 2, labels = c("B", "C")), # Second row with box and dot plots
+                         ggarrange(p_vel_treat, # First row
+                                   ggarrange(p_vel_treat_mean, p_vel_treat_max, ncol = 2, labels = c("E", "F")), # Second row with box and dot plots
+                                   nrow = 2, 
+                                   #common.legend = TRUE,
+                                   heights = c(4,2),
+                                   labels = "D" # Labels of the first plot
+                         ),
+                         nrow = 3, 
+                         heights = c(1,1,4),
+                         common.legend = TRUE,
+                         labels = "A" # Labels of the first plot
+) 
+arrange_all
+svg("svg_plots_output/data_long_velocities_arrange_all.svg",  width=10, height=12)
+arrange_all
+dev.off()
