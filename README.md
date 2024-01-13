@@ -13,7 +13,7 @@ This tool was initially developed and used in the research conducted by Christia
 Conze C, Rierola M, Trushina NI, Peters M, Janning D, Holzer M, Heinisch JJ, Arendt T, Bakota L, Brandt R. Caspase-cleaved tau is senescence-associated and induces a toxic gain of function by putting a brake on axonal transport. Mol Psychiatry. 2022 Jul;27(7):3010-3023. doi: 10.1038/s41380-022-01538-2. Epub 2022 Apr 7. PMID: 35393558; PMCID: PMC9205779.
 
 ## Authors
-[Nataliya Trushina] - *Python and R scripts* - [https://github.com/zari-ross]
+[Nataliya Trushina] - *Python and R scripts and concept design* - [https://github.com/zari-ross]
 
 [Christian Conze] - *IMARIS analysis and concept design*
 
