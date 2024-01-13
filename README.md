@@ -1,7 +1,7 @@
 # Tau421 (TauC3) Transport Analysis 
+
 ## Fast Axonal Transport Analysis Tool
 
-## Graphical Abstract
 ![Analysis Description](analysis_description.png?raw=true)
 *Figure: Schematic representation of the analysis process and potential insights gained from the Tau421 Transport Analysis tool.*
 
