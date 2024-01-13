@@ -1,6 +1,5 @@
 # Tau421 (TauC3) Transport Analysis 
-or 
-# Fast Axonal Transport Analysis Tool
+## Fast Axonal Transport Analysis Tool
 
 ## Graphical Abstract
 ![Analysis Description](analysis_description.png?raw=true)
