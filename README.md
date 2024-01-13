@@ -1,11 +1,13 @@
-# Tau421 Transport Analysis
+# Tau421 (TauC3) Transport Analysis 
+or 
+# Fast Axonal Transport Analysis Tool
 
 ## Graphical Abstract
 ![Analysis Description](analysis_description.png?raw=true)
 *Figure: Schematic representation of the analysis process and potential insights gained from the Tau421 Transport Analysis tool.*
 
 ## Overview
-Tau421 Transport Analysis is a post-processing tool for analyzing axonal transport in model neurons. It focuses on APP vesicle tracking using an output from the autoregressive motion algorithm provided by IMARIS. This tool processes output from IMARIS, specifically Excel files, to derive meaningful statistics such as speed and processivity of vesicle transport within neurons. It also examines vesicle stops and directional changes in transport, distinguishing between retrograde and anterograde movements.
+This is a post-processing tool for analyzing axonal transport in model neurons. It focuses on APP vesicle tracking using an output from the autoregressive motion algorithm provided by IMARIS (versions 9.2 and 9.5 tested). This tool processes output from IMARIS, specifically Excel files, to derive meaningful statistics such as speed and processivity of vesicle transport within neurons. It also examines vesicle stops and directional changes in transport, distinguishing between retrograde and anterograde movements.
 
 This tool was initially developed and used in the research conducted by Christian Conze et al., as cited below.
 
