@@ -2,8 +2,11 @@ import pandas as pd
 import glob
 import os
 
+tag_postfix = "condition"  # Coment out this string if you don't want a postfix
+
 # Get the directory of the current file and set it as the working directory
-dir_path = os.path.dirname(os.path.realpath(__file__)) 
+# dir_path = os.path.dirname(os.path.realpath(__file__)) 
+dir_path = r"windowspath\to\your\directory"
 
 # Change the current working directory to the script directory
 os.chdir(dir_path)
@@ -41,5 +44,12 @@ df = df.reindex(sorted(df.columns), axis=1)
 # Sort the DataFrame based on the 'ID' column in ascending order
 df=df.sort_values(by=["ID"], ascending=True)
 
+# Attempt to use tag_postfix if it's defined
+try:
+    filename = "merged_table_" + tag_postfix + ".csv" if tag_postfix else "merged_table.csv"
+except NameError:
+    # If tag_postfix is not defined, use the default filename
+    filename = "merged_table.csv"
+
 # Export the DataFrame to a CSV file
-df.to_csv("merged_table.csv", sep=';', index=False, header=True)
+df.to_csv(filename, sep=';', index=False, header=True)
