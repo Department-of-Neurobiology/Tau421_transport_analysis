@@ -2,7 +2,7 @@ import pandas as pd
 import glob
 import os
 
-tag_postfix = "condition"  # Coment out this string if you don't want a postfix
+tag_postfix = "condition"  # Comment out this string if you don't want a postfix
 
 # Get the directory of the current file and set it as the working directory
 # dir_path = os.path.dirname(os.path.realpath(__file__)) 
