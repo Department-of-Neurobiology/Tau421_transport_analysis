@@ -1,33 +1,43 @@
-########################################
-##  Nataliya Trushina, 2020 ##
-##  Kymograph-like analysis of trajectories ##
-
-# Requirements: xls table with Displacement X Reference Frame and list of ids for mobile vesicles.
+# Kymograph-like analysis of trajectories
+# Author: Nataliya Trushina	
+# Start date: 2020-01-01
+# Last modified: 2024-01-14
+# Description: Postprocess IMARIS collection output for axonal transport analysis
+# Requirements: xls tables with Displacement X Reference Frame 
+# and "mobility_table_all_conditions.csv" - the output of "01b_axonal_transport_cell_means.R"
 
 # Note: If Excel files from different OneDrive accounts cannot be opened with read_excel(),
 # open the file and save it again or use the Linux subsystem to automatically write them into new files.
-
-# Convert xls files to xlsx
+# Convert xls files to xlsx:
+# In one folder:
 # unoconv -f xlsx *.xls
+# When ran from an upper directory with all condition directories:
 # for dir in *; do [ -d "$dir" ] && unoconv -f xlsx "$dir"/*.xls; done
 
-########################################
+# ---------------------------------------------------------------------------- #
 
 # Load libraries
+
+library(tidyverse) # Includes ggplot2, dplyr, tidyr, readr, purrr, tibble, and stringr
 library(readxl)
-library(tidyr)
-library(dplyr)
-library(ggplot2)
 library(Rmisc)
-library(stringr)
-library(plotly)
 library(zoo)
 library(ggpubr)
 library(rlist)
 
-# Set color palette
+# ---------------------------------------------------------------------------- #
+
+# Settings
+
+# Set working directory
+# setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+working_path <- "path/to/single_cell_trajectories"
+
 cols <- c("retrograde" = "#ff9955", "stationary" = "#000000", "anterograde" = "#87decd")
 col_gradient <- colorRampPalette(c("#390099", "#9E0059", "#FF0054", "#FF5400", "#FFBD00"))
+
+# ---------------------------------------------------------------------------- #
 
 # Functions
 
@@ -37,40 +47,46 @@ create_empty_table <- function(num_rows, num_cols) {
   return(frame)
 }
 
-# Merge input tables
-merge_input_tables <- function(filenames) {
-  data_merge <- data.frame()
-  
-  # Iterate through all files
-  for (i in filenames){  
-    x <- read_excel(i, sheet = "Sheet1")
-    
-    x$`Track Displacement X Reference Frame` <- as.numeric(x$`Track Displacement X Reference Frame`)
-    
-    # Define mobility and directionality
-    x$Mobility <- "Immobile"
-    x$Mobility[x$`Track Displacement X Reference Frame` > 0.75] <- "Mobile"
-    x$Mobility[x$`Track Displacement X Reference Frame` < -0.75] <- "Mobile"
-    
-    x$Directionality <- "Stationary"
-    x$Directionality[x$`Track Displacement X Reference Frame` > 0.75] <- "Anterograde" 
-    x$Directionality[x$`Track Displacement X Reference Frame` < -0.75] <- "Retrograde" 
-    
-    data_merge <- rbind(data_merge, x)
-  }
-  return(data_merge)
+# # Merge input tables
+# merge_input_tables <- function(filenames) {
+#   data_merge <- data.frame()
+#   
+#   # Iterate through all files
+#   for (i in filenames){  
+#     x <- read_excel(i, sheet = "Sheet1")
+#     
+#     x$`Track Displacement X Reference Frame` <- as.numeric(x$`Track Displacement X Reference Frame`)
+#     
+#     # Define mobility and directionality
+#     x$Mobility <- "Immobile"
+#     x$Mobility[x$`Track Displacement X Reference Frame` > 0.75] <- "Mobile"
+#     x$Mobility[x$`Track Displacement X Reference Frame` < -0.75] <- "Mobile"
+#     
+#     x$Directionality <- "Stationary"
+#     x$Directionality[x$`Track Displacement X Reference Frame` > 0.75] <- "Anterograde" 
+#     x$Directionality[x$`Track Displacement X Reference Frame` < -0.75] <- "Retrograde" 
+#     
+#     data_merge <- rbind(data_merge, x)
+#   }
+#   return(data_merge)
+# }
+
+save_plot <- function(plot, file_name, width, height) {
+  ggsave(paste0(file_name, ".svg"), plot = plot, width = width, height = height)
+  ggsave(paste0(file_name, ".png"), plot = plot, width = width, height = height)
 }
 
-# Set working directory
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) 
+# ---------------------------------------------------------------------------- #
 
 # Create full annotation table from condition export tables
-filenames <- Sys.glob(file.path("*xlsx"))
-full_ID_table <- merge_input_tables(filenames)
+# filenames <- Sys.glob(file.path("*xlsx"))
+# full_ID_table <- merge_input_tables(filenames)
 
-# Filter mobile vesicles
-mobile_ID_table <- full_ID_table[which(full_ID_table$Directionality != 'Stationary'), ]
-mobile_IDs <- as.factor(mobile_ID_table$`Original ID`)
+full_ID_table <- read.csv("mobility_table_all_conditions.csv", sep = ";", dec = ",")
+
+# Filter mobile vesicles - if using another input for mobility calculation, is not required for "mobility_table_all_conditions.csv"
+mobile_ID_table <- full_ID_table[which(full_ID_table$Mobility=='Mobile'), ]
+mobile_IDs <- as.factor(mobile_ID_table$Original.ID)
 
 # Select only folders
 all_files <- list.files(rec = F)
@@ -78,8 +94,8 @@ condition_folders <- all_files[file.info(all_files)$isdir]
 
 # Iterate through all condition folders
 for (condition in condition_folders) {
-  setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) 
-  setwd(paste(condition,sep=""))
+  setwd(working_path) 
+  setwd(paste0(working_path, "/", condition))
   print(getwd())
 
   # Get filenames with a specific pattern
@@ -128,6 +144,7 @@ for (condition in condition_folders) {
       scale_x_continuous(breaks = seq(-100, 100, by = 1))
     
     # ggsave(plot_all_IDcolored, filename = paste(x, "_trajectories.png", sep = ""), width = 8, height = 10)
+    save_plot(plot = plot_all_IDcolored, file_name = paste0(x, "_trajectories"), 8, 10)
     
     # ggplot(df_subset, aes(x = `Displacement X Reference Frame`, y = Time)) +
     #   geom_path(aes(color = Time), size=1) +
