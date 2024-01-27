@@ -31,8 +31,8 @@ library(rlist)
 
 # Set working directory
 # setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-
 working_path <- "path/to/single_cell_trajectories"
+setwd(working_path)
 
 cols <- c("retrograde" = "#ff9955", "stationary" = "#000000", "anterograde" = "#87decd")
 col_gradient <- colorRampPalette(c("#390099", "#9E0059", "#FF0054", "#FF5400", "#FFBD00"))
