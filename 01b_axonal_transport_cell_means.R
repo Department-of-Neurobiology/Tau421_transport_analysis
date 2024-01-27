@@ -8,18 +8,19 @@
 # Libraries
 library(tidyverse)
 library(scales)
+library(ggpubr)
 
 # ---------------------------------------------------------------------------- #
 
 # Settings
-color_condition <- colorRampPalette(c("#275ea3", "#4b5354"))
+color_condition <- colorRampPalette(c("#601891", "#04279A"))
 color_mobility_direction <- colorRampPalette(c("gray", "black"))
 
 # if renaming is required for plotting
-names_conditions_renamed <- c("cond1", "cond2")  # check the order in line 64
+names_conditions_renamed <- c("A53T", "WT")  # check the order in line print(names_conditions_filenames)
 
 # Set working directory
-# setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) 
+# setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd("path/to/files")
 
 # Define custom theme
@@ -105,12 +106,12 @@ p_percent_mobility <- ggplot(dat_merged, aes(x = Condition)) +
   scale_y_continuous(limits = c(0,1),breaks=seq(0, 1, 0.2))
 p_percent_mobility
 
-save_plot(p_percent_mobility, "mobility_percentage", width = 2.5, height = 2.2)
+save_plot(p_percent_mobility, "percentage_mobility", width = 2.5, height = 2.2)
 
 # ---------------------------------------------------------------------------- #
 
 p_percent_direction <- ggplot(dat_merged, aes(x = Condition)) +
-  geom_bar(aes(color = Condition, fill = Directionality), position="fill", width = 0.5, size=1) +
+  geom_bar(aes(color = Condition, fill = Directionality), position="fill", width = 0.5, linewidth = 1) +
   scale_color_manual(values = palette_condition) +
   scale_fill_manual(values = palette_direction) +
   theme_custom +
@@ -118,11 +119,11 @@ p_percent_direction <- ggplot(dat_merged, aes(x = Condition)) +
   scale_y_continuous(limits = c(0,1),breaks=seq(0, 1, 0.2))
 p_percent_direction
 
-save_plot(p_percent_direction, "mobility_percentage", width = 2.5, height = 2.2)
+save_plot(p_percent_direction, "percentage_directionality", width = 2.5, height = 2.2)
 
 # ---------------------------------------------------------------------------- #
 
-write.csv2(dat_merged, "mobility_table_all_conditions.csv", row.names = FALSE)
+write.csv2(dat_merged, "all_track_table_all_conditions.csv", row.names = FALSE)
 
 # ---------------------------------------------------------------------------- #
 
@@ -139,7 +140,7 @@ dat_merged_mobile$Processivity <- dat_merged_mobile$Track.Displacement.Length.Re
 
 # ---------------------------------------------------------------------------- #
 
-write.csv2(dat_merged_mobile, paste("means_output.csv", sep=""), row.names = FALSE)
+write.csv2(dat_merged_mobile, "mobility_table_all_conditions.csv", row.names = FALSE)
 
 # ---------------------------------------------------------------------------- #
 
@@ -185,6 +186,10 @@ colnames(df_for_plot_mean) <- c("Original.Image.Name", "Track.Displacement.Lengt
 
 dat_merged_mobile_means <- left_join(df_for_plot_mean, dat_merged_mobile[c("Original.Image.Name", "Condition")], by = "Original.Image.Name")
 dat_merged_mobile_means <- dat_merged_mobile_means[!duplicated(dat_merged_mobile_means),]
+
+# ---------------------------------------------------------------------------- #
+
+write.csv2(dat_merged_mobile_means, "cell_means_table_all_conditions.csv", row.names = FALSE)
 
 # ---------------------------------------------------------------------------- #
 
