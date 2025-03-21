@@ -17,11 +17,12 @@ color_condition <- colorRampPalette(c("#601891", "#04279A"))
 color_mobility_direction <- colorRampPalette(c("gray", "black"))
 
 # if renaming is required for plotting
-names_conditions_renamed <- c("A53T", "WT")  # check the order in line print(names_conditions_filenames)
+names_conditions_renamed <- c("PHP", "WT")  # check the order in line print(names_conditions_filenames)
+correct_order <-  c("WT", "PHP")
 
 # Set working directory
-# setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-setwd("path/to/files")
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+# setwd("path/to/files")
 
 # Define custom theme
 theme_custom <- theme_classic() +
@@ -65,8 +66,11 @@ for (i in file_names){
 print(names_conditions_filenames)
 
 dat_merged <- dat_merged %>%
-  dplyr::mutate(Condition = factor(Condition, levels = names_conditions_filenames, labels = names_conditions_renamed)) %>%
-  dplyr::mutate(Original.Image.Name = factor(Original.Image.Name))
+  dplyr::mutate(
+    Condition = factor(Condition, levels = names_conditions_filenames, labels = names_conditions_renamed),
+    Condition = factor(Condition, levels = correct_order),
+    Original.Image.Name = factor(Original.Image.Name)
+    )
 
 # ---------------------------------------------------------------------------- #
 
