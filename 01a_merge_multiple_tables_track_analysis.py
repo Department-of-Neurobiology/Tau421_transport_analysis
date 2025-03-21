@@ -1,3 +1,5 @@
+# pip install pandas xlrd
+
 import pandas as pd
 import glob
 import os
@@ -5,8 +7,8 @@ import os
 tag_postfix = "condition"  # Comment out this string if you don't want a postfix
 
 # Get the directory of the current file and set it as the working directory
-# dir_path = os.path.dirname(os.path.realpath(__file__)) 
-dir_path = r"windowspath\to\your\directory"
+dir_path = os.path.dirname(os.path.realpath(__file__)) 
+# dir_path = r"windowspath\to\your\directory"
 
 # Change the current working directory to the script directory
 os.chdir(dir_path)
