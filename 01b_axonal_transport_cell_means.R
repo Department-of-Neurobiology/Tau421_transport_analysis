@@ -1,7 +1,7 @@
 # Axonal transport cell means
 # Author: Nataliya Trushina	
 # Start date: 2021-01-01
-# Last modified: 2024-01-14
+# Last modified: 2025-03-24
 # Description: Postprocess IMARIS collection output for axonal transport analysis
 # Requirements: "merged_table_*.csv" files in the working directory from "01a_merge_multiple_tables_track_analysis.py"
 
@@ -9,12 +9,13 @@
 library(tidyverse)
 library(scales)
 library(ggpubr)
+library(writexl)
 
 # ---------------------------------------------------------------------------- #
 
 # Settings
-color_condition <- colorRampPalette(c("#601891", "#04279A"))
-color_mobility_direction <- colorRampPalette(c("gray", "black"))
+color_condition <- colorRampPalette(c("#000000", "#A00000"))
+color_mobility_direction <- colorRampPalette(c("gray", "gray20"))
 
 # if renaming is required for plotting
 names_conditions_renamed <- c("PHP", "WT")  # check the order in line print(names_conditions_filenames)
@@ -50,10 +51,10 @@ names_conditions_filenames <- c()
 
 # Loop through all files
 for (i in file_names){  
-  dat <- read.table(i, sep = ";",header = TRUE)
+  dat <- read.table(i, sep = ";", header = TRUE)
   
-  condition_name <- gsub(".csv", "",i)
-  condition_name <- gsub("merged_table_", "",condition_name)
+  condition_name <- gsub(".csv", "", i)
+  condition_name <- gsub("merged_table_", "", condition_name)
   print(condition_name)
 
   dat$Condition <- condition_name
@@ -61,6 +62,8 @@ for (i in file_names){
   names_conditions_filenames <- append(names_conditions_filenames, condition_name)
   
   dat_merged <- rbind(dat_merged, dat)
+  setdiff(colnames(dat_merged), colnames(dat))
+  setdiff(colnames(dat), colnames(dat_merged))
 }
 
 print(names_conditions_filenames)
@@ -127,7 +130,7 @@ save_plot(p_percent_direction, "percentage_directionality", width = 2.5, height 
 
 # ---------------------------------------------------------------------------- #
 
-write.csv2(dat_merged, "all_track_table_all_conditions.csv", row.names = FALSE)
+writexl::write_xlsx(dat_merged, path = "all_track_table_all_conditions.xlsx")
 
 # ---------------------------------------------------------------------------- #
 
@@ -144,7 +147,7 @@ dat_merged_mobile$Processivity <- dat_merged_mobile$Track.Displacement.Length.Re
 
 # ---------------------------------------------------------------------------- #
 
-write.csv2(dat_merged_mobile, "mobility_table_all_conditions.csv", row.names = FALSE)
+writexl::write_xlsx(dat_merged_mobile, path = "mobility_table_all_conditions.xlsx")
 
 # ---------------------------------------------------------------------------- #
 
@@ -193,7 +196,36 @@ dat_merged_mobile_means <- dat_merged_mobile_means[!duplicated(dat_merged_mobile
 
 # ---------------------------------------------------------------------------- #
 
-write.csv2(dat_merged_mobile_means, "cell_means_table_all_conditions.csv", row.names = FALSE)
+var_list <- setdiff(names(dat_merged_mobile_means), "Condition")
+
+data_list <- purrr::map(var_list, function(col_name) {
+  temp <- dat_merged_mobile_means %>%
+    dplyr::select(Condition, all_of(col_name))
+  
+  # Flatten list columns by collapsing into a comma-separated string
+  if (any(purrr::map_lgl(temp[[col_name]], is.list))) {
+    temp[[col_name]] <- purrr::map_chr(temp[[col_name]], ~ paste(.x, collapse = ","))
+  } else {
+    if (all(purrr::map_lgl(temp[[col_name]], ~ stringr::str_detect(.x, "^[-+]?[0-9]*\\,?[0-9]+$")))) {
+      temp[[col_name]] <- as.numeric(temp[[col_name]])
+    } else {
+      temp[[col_name]] <- as.character(temp[[col_name]])
+    }
+  }
+  
+  temp <- temp %>%
+    dplyr::group_by(Condition) %>%
+    dplyr::mutate(row_id = dplyr::row_number()) %>%
+    dplyr::ungroup()
+  
+  temp %>%
+    tidyr::pivot_wider(names_from = Condition, values_from = all_of(col_name)) %>%
+    dplyr::select(-row_id)
+})
+
+names(data_list) <- var_list
+
+writexl::write_xlsx(data_list, path = "cell_means_table_all_conditions.xlsx")
 
 # ---------------------------------------------------------------------------- #
 
