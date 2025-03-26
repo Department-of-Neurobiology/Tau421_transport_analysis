@@ -40,7 +40,7 @@ Ensure you have read and write permissions for the Excel files. The solution to 
 2. **Run Scripts:** Execute the scripts in the following order:
    - `01a_merge_multiple_tables_track_analysis.py` for merging tables.
    - `01b_axonal_transport_cell_means.R` for processing means and medians.
-   - `02a_2D_trajectory_analysis.R` for individual cell track analysis.
+   - `02a_2D_trajectory_analysis.R` for individual cell track analysis.  # IMPORTANT Check that Excel files can be read in; if not, use unoconvas in the script comments.
    - `02b_postanalysis_plot_numbers_of_state_changes.R` for generating plots.
 
 ## Output
