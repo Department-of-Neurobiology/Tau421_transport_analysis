@@ -147,7 +147,7 @@ dat_merged_mobile$Processivity <- dat_merged_mobile$Track.Displacement.Length.Re
 
 # ---------------------------------------------------------------------------- #
 
-writexl::write_xlsx(dat_merged_mobile, path = "mobility_table_all_conditions.xlsx")
+write.csv2(dat_merged_mobile, "mobility_table_all_conditions.csv", row.names = FALSE)
 
 # ---------------------------------------------------------------------------- #
 
