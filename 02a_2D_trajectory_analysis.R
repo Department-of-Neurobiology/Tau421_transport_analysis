@@ -186,20 +186,24 @@ for (condition in condition_folders) {
     # The lower border of mean minimum is 0.8 um per second if we divide by 5 (5 frames per second, 200ms each frame) then it was close to 0.02 which we chose as cut-off
     df_subset$motion <- ifelse(df_subset$delta_x < -0.02, "retrograde", ifelse(df_subset$delta_x > 0.02, "anterograde", "stationary"))
     
-    ggplot(na.omit(df_subset), aes(x = `Displacement X Reference Frame`, y = Time)) +
-      #geom_path() + #aes(color = TrackID)
-      scale_color_manual(values = cols) +
+    plot_all_motioncolored <- ggplot(na.omit(df_subset), aes(x = `Displacement X Reference Frame`, y = Time)) +
+      geom_path(aes(group = TrackID)) +
       geom_point(data = na.omit(df_subset), aes(color=motion), size=1) +
-      #theme_classic() +
-      ggtitle("No filtering") +
-      xlab("Displacement smoothed by window = 5") +
+      scale_color_manual(values = cols) +
+      ggtitle("Trajectories, mobile fraction only") +
+      xlab("Displacement X Reference Frame") +
       ylab("Time") +
-      scale_y_reverse() +
-      scale_x_continuous(breaks = seq(-5, 5, by = 0.5))
+      scale_y_reverse(breaks = seq(300, 0, by = -20)) +
+      scale_x_continuous(breaks = seq(-100, 100, by = 1)) +
+      theme_classic() +
+      theme(
+        legend.position = "bottom"
+        )
+    
+    save_plot(plot = plot_all_motioncolored, file_name = paste0(x, "_motion"), 8, 10)
      
     df_subset_naomit <- na.omit(df_subset, cols="delta_x")
     df_subset_naomit$motion <- as.factor(df_subset_naomit$motion)
-    
     
     # --------------------------------------------------
     # # Filtering: if previous and next are same, change the middle one for next
